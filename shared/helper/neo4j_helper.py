@@ -4,12 +4,11 @@ import json
 from logging import Logger
 import os
 import time
-import traceback
-import sys
+import re
+from datetime import datetime 
 import mygene
 import requests
 import urllib.request
-from datetime import datetime 
 from neo4j import exceptions
 from neo4j import GraphDatabase
 from typing import List, Set, Dict, Tuple
@@ -597,22 +596,8 @@ class Neo4j_Manager:
                 attributes_labels = ["pubmed_id", "pmc_id", "label", "title", "epubdate", "journal"]
                 #return_fields = return_fields + ", a.journal as \
                 # journal_name, a.iso_sortpubdate AS publication_date "
-            elif entity_label.lower() == "disease":
-                attributes = ["name", "label"]
-                attributes_labels = ["mesh_disease", "label"]
-            elif entity_label.lower() == "gene":
-                attributes = ["name", "label", "entrezgene", "symbol"]
-                attributes_labels = ["name", "label", "entrez_gene", "symbol"]
-            elif entity_label.lower() == "chemical":
-                attributes = ["name", "label"]
-                attributes_labels = ["mesh_chemical", "label"]
-            elif entity_label.lower() == "drug":
-                attributes = ["name", "label"]
-            else:
-                attributes = ["name", "label"]
-                attributes_labels = attributes
 
-            class_string = ":"+entity_label
+            type_string = ":"+entity_label
             ## now filter for search_terms and / or id
             if (search_terms or entity_id):
                 where_clause = self.get_where_clause(entity_id, entity_fields,
@@ -1076,7 +1061,9 @@ class Neo4j_Manager:
                                  "pathway_reactome", "pathway_wikipathways", \
                                  "pathway_biocarta", "pathway_netpath", \
                                  "pathway_pid", "drug"]:
-                optional_pathway_link ="--(any_gene:gene)"
+                ## pathways / GO terms are only indirectly connected
+                ## -> take genes as jump node
+                goal_jump_entity = "-->(:gene)"
 
             class_string = ":"+concept_label
         else:
@@ -1180,9 +1167,66 @@ class Neo4j_Manager:
             return result
     
     def add_age_for_all_articles(self) -> list:
+        def format_date(date_str):
+            """Convert date string to Neo4j compatible format (YYYY-MM-DD)"""
+            try:
+                # Try to parse with various formats
+                for fmt in ["%Y %b %d", "%Y-%m-%d", "%Y %B %d", "%b %d %Y", "%B %d %Y"]:
+                    try:
+                        date_obj = datetime.strptime(date_str, fmt)
+                        return date_obj.strftime("%Y-%m-%d")
+                    except ValueError:
+                        continue
+                
+                # If no format matches, try to extract year, month, day
+                parts = date_str.split()
+                if len(parts) == 3:  # Format like "2024 Mar 7"
+                    year = parts[0]
+                    month = datetime.strptime(parts[1], "%b").month
+                    day = parts[2].zfill(2)
+                    return f"{year}-{str(month).zfill(2)}-{day}"
+                    
+                return None
+            except Exception as e:
+                self.logging.error(f"Error parsing date {date_str}: {str(e)}")
+                return None
+
         with self.driver.session() as session:
-            result = session.write_transaction(self._add_age_for_all_articles)
-            return result
+            # First get all articles with their dates
+            query = (
+                "MATCH (n:Article) "
+                "WHERE n.epubdate IS NOT NULL AND n.date_integration IS NOT NULL "
+                "RETURN n.epubdate as epubdate, n.date_integration as date_integration, id(n) as id"
+            )
+            result = session.run(query)
+            
+            # Format dates and update articles
+            for record in result:
+                article_id = record["id"]
+                epubdate = record["epubdate"]
+                date_integration = record["date_integration"]
+                
+                # Format dates
+                formatted_epubdate = format_date(epubdate)
+                formatted_date_integration = format_date(date_integration)
+                
+                if formatted_epubdate and formatted_date_integration:
+                    update_query = (
+                        "MATCH (n:Article) WHERE id(n) = $article_id "
+                        "SET n.epubdate = $epubdate, "
+                        "    n.date_integration = $date_integration, "
+                        "    n.age_in_days = duration.inDays(date($epubdate), date($date_integration)).days, "
+                        "    n.age_in_months = duration.inMonths(date($epubdate), date($date_integration)).months"
+                    )
+                    session.run(update_query, {
+                        "article_id": article_id,
+                        "epubdate": formatted_epubdate,
+                        "date_integration": formatted_date_integration
+                    })
+                else:
+                    self.logging.warning(f"Could not format dates for article {article_id}: "
+                                  f"epubdate={epubdate}, date_integration={date_integration}")
+        return []
 
     def add_mygene_information(self):
         gene_list = self.where_exists_field("gene", "entrezgene", "name", 
@@ -1865,8 +1909,7 @@ class Neo4j_Manager:
 
 
     def get_cytoscape_query(self, query_key: str, 
-            base_input_path = "/input",
-            base_output_path = "/output",
+            base_input_path = "/input", base_output_path = "/output",
             run_node_embedding: bool = True
             ) -> None:
         response = None
@@ -2102,17 +2145,64 @@ class Neo4j_Manager:
     
     @staticmethod
     def _add_age_for_all_articles(tx):
+        def format_date(date_str):
+            """Convert date string to Neo4j compatible format (YYYY-MM-DD)"""
+            try:
+                # Try to parse with various formats
+                for fmt in ["%Y %b %d", "%Y-%m-%d", "%Y %B %d", "%b %d %Y", "%B %d %Y"]:
+                    try:
+                        date_obj = datetime.strptime(date_str, fmt)
+                        return date_obj.strftime("%Y-%m-%d")
+                    except ValueError:
+                        continue
+                
+                # If no format matches, try to extract year, month, day
+                parts = date_str.split()
+                if len(parts) == 3:  # Format like "2024 Mar 7"
+                    year = parts[0]
+                    month = datetime.strptime(parts[1], "%b").month
+                    day = parts[2].zfill(2)
+                    return f"{year}-{str(month).zfill(2)}-{day}"
+                    
+                return None
+            except Exception as e:
+                tx.logging.error(f"Error parsing date {date_str}: {str(e)}")
+                return None
+
         query = (
-            "MATCH (n:Article) " 
-            "WHERE size(n.epubdate) = 10 AND size(n.date_integration) = 10 "
-            "SET n.age_in_days = duration.inDays(date(n.epubdate), "\
-                "date(n.date_integration)).days, n.age_in_months = "\
-                "duration.inMonths(date(n.epubdate), "\
-                "date(n.date_integration)).months "
-            "RETURN count(n) as count_n"
-            )
+            "MATCH (n:Article) "
+            "WHERE n.epubdate IS NOT NULL AND n.date_integration IS NOT NULL "
+            "RETURN n.epubdate as epubdate, n.date_integration as date_integration, id(n) as id"
+        )
         result = tx.run(query)
-        return [record["count_n"] for record in result]
+        
+        # Format dates and update articles
+        for record in result:
+            article_id = record["id"]
+            epubdate = record["epubdate"]
+            date_integration = record["date_integration"]
+            
+            # Format dates
+            formatted_epubdate = format_date(epubdate)
+            formatted_date_integration = format_date(date_integration)
+            
+            if formatted_epubdate and formatted_date_integration:
+                update_query = (
+                    "MATCH (n:Article) WHERE id(n) = $article_id "
+                    "SET n.epubdate = $epubdate, "
+                    "    n.date_integration = $date_integration, "
+                    "    n.age_in_days = duration.inDays(date($epubdate), date($date_integration)).days, "
+                    "    n.age_in_months = duration.inMonths(date($epubdate), date($date_integration)).months"
+                )
+                tx.run(update_query, {
+                    "article_id": article_id,
+                    "epubdate": formatted_epubdate,
+                    "date_integration": formatted_date_integration
+                })
+            else:
+                tx.logging.warning(f"Could not format dates for article {article_id}: "
+                                  f"epubdate={epubdate}, date_integration={date_integration}")
+        return []
 
     @staticmethod
     def _cleanup_duplicated_edges(tx):

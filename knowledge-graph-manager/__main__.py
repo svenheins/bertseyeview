@@ -540,6 +540,31 @@ def get_relevant_keywords(str_candidate: str, search_terms: List[str]) -> List[s
 ## this function takes in the json_response, and the csv_content and updates
 # the csv_content based on the json_response and article_data, that needs to
 # be provided
+def format_date_for_neo4j(date_str: str) -> str:
+    """Convert date string to Neo4j compatible format (YYYY-MM-DD)"""
+    try:
+        # Try to parse with various formats
+        for fmt in ["%Y %b %d", "%Y-%m-%d", "%Y %B %d", "%b %d %Y", "%B %d %Y"]:
+            try:
+                date_obj = datetime.strptime(date_str, fmt)
+                return date_obj.strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+        
+        # If no format matches, try to extract year, month, day
+        parts = date_str.split()
+        if len(parts) == 3:  # Format like "2024 Mar 7"
+            year = parts[0]
+            month = datetime.strptime(parts[1], "%b").month
+            day = parts[2].zfill(2)
+            return f"{year}-{str(month).zfill(2)}-{day}"
+            
+        return None
+    except Exception as e:
+        logging.error(f"Error parsing date {date_str}: {str(e)}")
+        return None
+
+
 def update_csv_content_by_json_response(
     json_response: requests.Response,
     csv_content: str,
@@ -605,6 +630,12 @@ def update_csv_content_by_json_response(
             logging.warning("No metadata found for articles")
             return csv_content, reference_id
 
+        # Format article epubdate
+        article_epubdate_formatted = format_date_for_neo4j(article_epubdate)
+        if not article_epubdate_formatted:
+            logging.warning(f"Could not parse article epubdate: {article_epubdate}")
+            article_epubdate_formatted = "2000-01-01"  # Default date
+
         # Process each reference
         for other_article in other_article_list:
             try:
@@ -619,6 +650,12 @@ def update_csv_content_by_json_response(
                 other_abstract = str(other_meta.get("abstract", "")).replace("|", ";")
                 other_authors = str(other_meta.get("authors", "")).replace("|", ";")
                 other_journal = str(other_meta.get("journal", "")).replace("|", ";")
+                
+                # Format other article epubdate
+                other_epubdate_formatted = format_date_for_neo4j(other_epubdate)
+                if not other_epubdate_formatted:
+                    logging.warning(f"Could not parse other article epubdate: {other_epubdate}")
+                    other_epubdate_formatted = "2000-01-01"  # Default date
                 
                 # Skip if no title or abstract
                 if not other_title or not other_abstract:
@@ -645,7 +682,7 @@ def update_csv_content_by_json_response(
                 if is_article_first:
                     # Article metadata
                     csv_candidate = (
-                        f"{reference_id}|{article_id}|{article_title}|{article_epubdate}|"
+                        f"{reference_id}|{article_id}|{article_title}|{article_epubdate_formatted}|"
                         f"{article_authors}|{article_journal}|{article_abstract}|"
                         f"{','.join(article_keywords) if article_keywords else ''}"
                     )
@@ -656,7 +693,7 @@ def update_csv_content_by_json_response(
                     
                     # Referenced article metadata
                     csv_candidate += (
-                        f"|{reference_id}|{other_article}|{other_title}|{other_epubdate}|"
+                        f"|{reference_id}|{other_article}|{other_title}|{other_epubdate_formatted}|"
                         f"{other_authors}|{other_journal}|{other_abstract}|"
                         f"{','.join(other_keywords) if other_keywords else ''}"
                     )
@@ -670,7 +707,7 @@ def update_csv_content_by_json_response(
                 else:
                     # Referenced article metadata
                     csv_candidate = (
-                        f"{reference_id}|{other_article}|{other_title}|{other_epubdate}|"
+                        f"{reference_id}|{other_article}|{other_title}|{other_epubdate_formatted}|"
                         f"{other_authors}|{other_journal}|{other_abstract}|"
                         f"{','.join(other_keywords) if other_keywords else ''}"
                     )
@@ -681,7 +718,7 @@ def update_csv_content_by_json_response(
                     
                     # Article metadata
                     csv_candidate += (
-                        f"|{reference_id}|{article_id}|{article_title}|{article_epubdate}|"
+                        f"|{reference_id}|{article_id}|{article_title}|{article_epubdate_formatted}|"
                         f"{article_authors}|{article_journal}|{article_abstract}|"
                         f"{','.join(article_keywords) if article_keywords else ''}"
                     )
@@ -715,28 +752,6 @@ def update_csv_content_by_json_response(
         raise e
 
     return csv_content, reference_id
-
-
-def get_author_string(author_list: List[str]) -> str:
-    if not author_list:
-        return "'NA'"
-    
-    if isinstance(author_list, str):
-        # If it's already a string, just clean and return it
-        return "'" + author_list.replace("'", "\\'") + "'"
-    
-    author_list_temp = []
-    if isinstance(author_list, list):
-        for author in author_list:
-            if isinstance(author, dict):
-                author_name = author.get("name", "NA")
-            else:
-                author_name = str(author)
-            author_list_temp.append(author_name)
-        authors = "'" + ";".join(author_list_temp).replace("'", "\\'") + "'"
-    else:
-        authors = "'NA'"
-    return authors
 
 
 ## create the citation csv (incoming and outgoing citations for all DOIs in the doi_list)
@@ -891,6 +906,28 @@ def create_citation_csv(
     f.close()
 
     return reference_id
+
+
+def get_author_string(author_list: List[str]) -> str:
+    if not author_list:
+        return "'NA'"
+    
+    if isinstance(author_list, str):
+        # If it's already a string, just clean and return it
+        return "'" + author_list.replace("'", "\\'") + "'"
+    
+    author_list_temp = []
+    if isinstance(author_list, list):
+        for author in author_list:
+            if isinstance(author, dict):
+                author_name = author.get("name", "NA")
+            else:
+                author_name = str(author)
+            author_list_temp.append(author_name)
+        authors = "'" + ";".join(author_list_temp).replace("'", "\\'") + "'"
+    else:
+        authors = "'NA'"
+    return authors
 
 
 def run_global_curation(neo4j_manager: Neo4j_Manager) -> None:
