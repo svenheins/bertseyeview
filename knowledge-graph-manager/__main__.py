@@ -329,7 +329,7 @@ def get_meta_data(
         pubmed_ids = [str(pubmed_ids_all_batches[i]) for i in list(pubmed_ids_batch)]
         pubmed_ids_join = ",".join([str(pubmed_id_str) for pubmed_id_str in pubmed_ids])
 
-        if run_pubtator == True:
+        if run_pubtator:
             pubtator_url = (
                 "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
                 "publications/export/biocxml?pmids=" + pubmed_ids_join + "&full=true"
@@ -360,90 +360,66 @@ def get_meta_data(
                                 'mutation': 'Null'
                             }
                             
-                            # Get metadata from PubTator
-                            if run_pubtator and pubmed_id_pubtator:  # Check for valid PMID
-                                try:
-                                    pubtator_url = (
-                                        "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
-                                        "publications/export/biocxml?pmids="
-                                        + str(pubmed_id_pubtator)
-                                        + "&full=true"
-                                    )
-                                    pubtator_response = request_with_delay(pubtator_url)
-                                    if pubtator_response is not None and pubtator_response.content:
-                                        pubtator_text = pubtator_response.content.decode("utf-8")
-                                        if not pubtator_text.strip():
-                                            logging.warning(f"Empty PubTator response for PMID {pubmed_id_pubtator}")
-                                            continue
-                                            
-                                        root = ET.fromstring(pubtator_text)
-                                        
-                                        # Find the document element
-                                        document = root.find('.//document')
-                                        if document is None:
-                                            logging.warning(f"No document element found for PMID {pubmed_id_pubtator}")
-                                            continue
-                                        
-                                        # Process passages
-                                        for passage in document.findall('.//passage'):
-                                            # Get type
-                                            type_elem = passage.find('.//infon[@key="type"]')
-                                            if type_elem is not None:
-                                                # Get title
-                                                if type_elem.text == "title":
-                                                    text_elem = passage.find('.//text')
-                                                    if text_elem is not None and text_elem.text:
-                                                        title_pubtator = text_elem.text
-                                                # Get abstract
-                                                elif type_elem.text == "abstract":
-                                                    text_elem = passage.find('.//text')
-                                                    if text_elem is not None and text_elem.text:
-                                                        abstract_pubtator = text_elem.text
-                                            
-                                            # Get authors
-                                            authors_elem = passage.find('.//infon[@key="authors"]')
-                                            if authors_elem is not None and authors_elem.text:
-                                                authors_pubtator = authors_elem.text
-                                        
-                                        # Process annotations
-                                        entity_annotations = {
-                                            'Disease': [], 'Gene': [], 'Chemical': [], 
-                                            'Species': [], 'Mutation': []
-                                        }
-                                        
-                                        for annotation in document.findall('.//annotation'):
-                                            try:
-                                                type_elem = annotation.find('.//infon[@key="type"]')
-                                                id_elem = annotation.find('.//infon[@key="identifier"]')
-                                                text_elem = annotation.find('.//text')
-                                                
-                                                if all([type_elem is not None, id_elem is not None, text_elem is not None]):
-                                                    entity_type = type_elem.text
-                                                    entity_id = id_elem.text
-                                                    entity_text = text_elem.text
-                                                    
-                                                    if entity_type in entity_annotations:
-                                                        annotation_str = f"{entity_id};{entity_text}"
-                                                        entity_annotations[entity_type].append(annotation_str)
-                                            except Exception as e:
-                                                logging.error(f"Error processing annotation: {str(e)}")
-                                                continue
-                                        
-                                        # Convert annotations to final format
-                                        for entity_type, annotations in entity_annotations.items():
-                                            entity_type_lower = entity_type.lower()
-                                            if annotations:
-                                                annotations_pubtator[entity_type_lower] = ','.join(annotations)
-                                            else:
-                                                annotations_pubtator[entity_type_lower] = 'Null'
-                                                
-                                except ET.ParseError as e:
-                                    logging.error(f"XML Parse error for PMID {pubmed_id_pubtator}: {str(e)}")
-                                    if pubtator_response is not None:
-                                        logging.error(f"Raw content: {pubtator_response.content[:500]}")
-                                except Exception as e:
-                                    logging.error(f"Unexpected error processing PMID {pubmed_id_pubtator}: {str(e)}")
+                            # Process passages
+                            for passage in document.findall('.//passage'):
+                                # Get type
+                                type_elem = passage.find('.//infon[@key="type"]')
+                                if type_elem is not None:
+                                    # Get title
+                                    if type_elem.text == "title":
+                                        text_elem = passage.find('.//text')
+                                        if text_elem is not None and text_elem.text:
+                                            title_pubtator = text_elem.text
+                                    # Get abstract
+                                    elif type_elem.text == "abstract":
+                                        text_elem = passage.find('.//text')
+                                        if text_elem is not None and text_elem.text:
+                                            abstract_pubtator = text_elem.text
+                                
+                                # Get authors
+                                authors_elem = passage.find('.//infon[@key="authors"]')
+                                if authors_elem is not None and authors_elem.text:
+                                    authors_pubtator = authors_elem.text
                             
+                            # Process annotations
+                            entity_annotations = {
+                                'Disease': [], 'Gene': [], 'Chemical': [], 
+                                'Species': [], 'Mutation': []
+                            }
+                            
+                            for annotation in document.findall('.//annotation'):
+                                try:
+                                    type_elem = annotation.find('.//infon[@key="type"]')
+                                    id_elem = annotation.find('.//infon[@key="identifier"]')
+                                    text_elem = annotation.find('.//text')
+                                    
+                                    if all([type_elem is not None, id_elem is not None, text_elem is not None]):
+                                        entity_type = type_elem.text
+                                        entity_id = id_elem.text
+                                        entity_text = text_elem.text
+                                        
+                                        # Skip invalid IDs
+                                        if entity_id == "-" or not entity_id:
+                                            logging.warning(f"Skipping invalid entity ID for {entity_type}: {entity_text}")
+                                            continue
+                                            
+                                        if entity_type in entity_annotations:
+                                            annotation_str = f"{entity_id};{entity_text}"
+                                            entity_annotations[entity_type].append(annotation_str)
+                                            logging.debug(f"Found {entity_type} annotation: {annotation_str}")
+                                except Exception as e:
+                                    logging.error(f"Error processing annotation: {str(e)}")
+                                    continue
+                            
+                            # Convert annotations to final format
+                            for entity_type, annotations in entity_annotations.items():
+                                entity_type_lower = entity_type.lower()
+                                if annotations:
+                                    annotations_pubtator[entity_type_lower] = ','.join(annotations)
+                                    logging.debug(f"Final {entity_type} annotations: {annotations_pubtator[entity_type_lower]}")
+                                else:
+                                    annotations_pubtator[entity_type_lower] = 'Null'
+                                    
                             entry_meta = {
                                 "title": title_pubtator,
                                 "abstract": abstract_pubtator,
@@ -478,63 +454,166 @@ def get_meta_data(
                 else:
                     title_list.append("")
                     abstract_list.append("")
-                    annotations_list.append("")
+                    annotations_list.append({
+                        'disease': 'Null',
+                        'gene': 'Null',
+                        'chemical': 'Null',
+                        'species': 'Null',
+                        'mutation': 'Null'
+                    })
                     authors_list.append("")
 
                 if pubmed_id in meta_json["result"]:
-                    sortpubdate_list.append(meta_json["result"][pubmed_id]["sortpubdate"])
-                    epubdate_list.append(meta_json["result"][pubmed_id]["epubdate"])
-                    journal_list.append(meta_json["result"][pubmed_id]["source"])
+                    meta_result = meta_json["result"][pubmed_id]
+                    sortpubdate_list.append(meta_result.get("sortpubdate", ""))
+                    epubdate_list.append(meta_result.get("epubdate", ""))
+                    journal_list.append(meta_result.get("fulljournalname", ""))
                 else:
                     sortpubdate_list.append("")
                     epubdate_list.append("")
                     journal_list.append("")
 
-    df_content = {
+    return pd.DataFrame({
+        "pubmed_id": pubmed_ids_all_batches,
         "title": title_list,
         "abstract": abstract_list,
-        "annotations": annotations_list,
         "sortpubdate": sortpubdate_list,
         "epubdate": epubdate_list,
         "authors": authors_list,
-        "journal": journal_list
-    }
+        "journal": journal_list,
+        "annotations": annotations_list
+    })
 
-    if len(df_content["title"]) == len(pubmed_ids_all_batches):
-        return_df = pd.DataFrame(data=df_content, index=pubmed_ids_all_batches)
+## simple helper function to remove quotation from comma-separated values
+def get_list_from_csv_string(
+    quoted_strings: str, quotation_character: str = "'", split_string: str = ","
+) -> list:
+    test_split = quoted_strings.split(split_string)
+    new_split = test_split
+    for index, term in enumerate(test_split):
+        if term.startswith(quotation_character) and term.endswith(quotation_character):
+            new_split[index] = term[1:-1]
+    return new_split
+
+
+## request something followed by a delay (pubmed allows 3 requests per second)
+def request_with_delay(
+    url: str, api_delay: float = 0.0, my_timeout: float = 20.0
+) -> requests.Response:
+    try:
+        response = requests.get(url, timeout=my_timeout)
+    except (
+        requests.exceptions.Timeout,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.ChunkedEncodingError,
+    ) as err:
+        # raise Exception("Request takes too long")
+        return None  #'Server taking too long. Try again later'
     else:
-        return_df = pd.DataFrame()
-        logging.info(
-            "Error: index has not the same size as the metadata-dataframe -> skipping the following batch"
-            + str(pubmed_ids_all_batches)
-        )
-    return return_df
+        time.sleep(api_delay)
+        return response
 
 
-def is_relevant(str_candidate: str, search_terms: List[str]) -> bool:
-    relevant = False
-    if len(search_terms) > 0:
-        for term in search_terms:
-            if str(term).lower() in str(str_candidate).lower():
-                relevant = True
-                break
-    else:
-        ## if there is no filter, always return True for relevant
-        relevant = True
-    return relevant
+def halve_time_interval(start_date_str, end_date_str):
+    # Parse the input date strings into datetime objects
+    start_date = datetime.strptime(start_date_str, "%Y/%m/%d")
+    end_date = datetime.strptime(end_date_str, "%Y/%m/%d")
+
+    # Calculate the time interval in days
+    time_interval = (end_date - start_date).days
+
+    # Calculate the midpoint by adding half of the time interval to the start date
+    midpoint = start_date + timedelta(days=time_interval // 2)
+
+    # Format the midpoint and return it along with the start date
+    midpoint_str = midpoint.strftime("%Y/%m/%d")
+
+    return midpoint_str
 
 
-def get_relevant_keywords(str_candidate: str, search_terms: List[str]) -> List[str]:
-    relevant = ["Null"]
-    if len(search_terms) > 0:
-        for term in search_terms:
-            if str(term).lower() in str(str_candidate).lower():
-                ## add to the beginning of the list
-                relevant.insert(0, term)
-        ## if there are more than one items, remove the last (Null-item)
-        if len(relevant) > 1:
-            relevant = relevant[:-1]
-    return relevant
+def update_doi_csv_by_query(search_query: str, path_doi_list: str) -> None:
+    if len(search_query) > 0:
+        logging.info("running query = " + search_query)
+
+        csv_out = "DOI"
+        min_date = "1900/01/01"
+        max_date_final = max_date = "2025/12/31"
+
+        ## if retmax <= 9999, one query is enough to get all the data
+        retmax_prepare = search_query.split("retmax=")
+        if len(retmax_prepare) > 0:
+            retmax = int(retmax_prepare[1].split("&")[0])
+        if retmax <= 9999:
+            if len(search_query) > 0:
+                # logging.info("running query = " + search_query)
+                csv_out = "DOI"
+                result = request_with_delay(search_query)
+                if result != None:
+                    if result.json() != None:
+                        if "esearchresult" in result.json():
+                            if "idlist" in result.json()["esearchresult"]:
+                                for doi in result.json()["esearchresult"]["idlist"]:
+                                    csv_out = "\n".join([csv_out, str(doi)])
+                        f = open(path_doi_list, "w")
+                        f.write(csv_out)
+                        f.close()
+        ## if retmax > 9999: get all entries by defining smaller bins (time intervals)
+        else:
+            # search_query = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=10000&term=kidney+immune&sort=relevance"
+            total_results_query = (
+                search_query + f"""&mindate={min_date}&maxdate={max_date_final}"""
+            )
+            result = request_with_delay(total_results_query)
+            total_results = 0
+            if result != None:
+                if result.json() != None:
+                    if "esearchresult" in result.json():
+                        if "idlist" in result.json()["esearchresult"]:
+                            total_results = int(result.json()["esearchresult"]["count"])
+                            logging.info("Total results = " + str(total_results))
+
+            if total_results > 0:
+                current_results = 0
+                while current_results < total_results:
+                    search_query_interval = (
+                        search_query + f"""&mindate={min_date}&maxdate={max_date}"""
+                    )
+                    result = request_with_delay(search_query_interval)
+                    if "esearchresult" in result.json():
+                        count_results = int(result.json()["esearchresult"]["count"])
+
+                        if count_results < 9999:
+                            if "idlist" in result.json()["esearchresult"]:
+                                for doi in result.json()["esearchresult"]["idlist"]:
+                                    csv_out = "\n".join([csv_out, str(doi)])
+                            current_results = len(csv_out.split("\n")) - 1
+                            logging.info(
+                                "found interval: "
+                                + min_date
+                                + " - "
+                                + max_date
+                                + " | count_results = "
+                                + str(count_results)
+                                + ", total_results = "
+                                + str(current_results)
+                            )
+                            min_date = max_date
+                            max_date = max_date_final
+                        else:
+                            ## halve the time interval
+                            max_date = halve_time_interval(min_date, max_date)
+                    else:
+                        break
+                        ## just leave the result as is
+
+                list_DOIs = ["DOI"]
+                ## remove duplicates
+                list_DOIs.extend(list(set(csv_out.split("\n")[1:])))
+                logging.info("removing duplicates and writing to csv-file")
+                final_output_str = "\n".join(list_DOIs)
+                f = open(path_doi_list, "w")
+                f.write(final_output_str)
+                f.close()
 
 
 ## this function takes in the json_response, and the csv_content and updates

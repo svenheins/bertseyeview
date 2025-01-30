@@ -77,6 +77,15 @@ def is_convertible_to_float(value: str) -> bool:
     return False
 
 def neo4j_create_entities_command(bioconcepts: str) -> str:
+    """
+    Generate Cypher commands to create entity nodes and relationships from PubTator annotations.
+    
+    Args:
+        bioconcepts: Comma-separated string of entity types (e.g., "Gene,Disease,Chemical")
+        
+    Returns:
+        str: Cypher commands for creating entities and relationships
+    """
     ret_string = ""
     for entity_class in bioconcepts.split(","):
         # Convert entity class to lowercase to match CSV column names
@@ -84,28 +93,23 @@ def neo4j_create_entities_command(bioconcepts: str) -> str:
         
         # Create nodes and relationships for article entities
         ret_string += (
-            f"FOREACH (annotation in CASE WHEN line.article_{entity_class_lower} <> 'Null' "
+            f"FOREACH (annotation in CASE WHEN line.article_{entity_class_lower} <> 'Null' AND "
+            f"line.article_{entity_class_lower} IS NOT NULL "
             f"THEN split(line.article_{entity_class_lower}, ',') ELSE [] END | "
-            f"MERGE (a:{entity_class} {{ name: split(annotation, ';')[0] }}) "
-            f"ON CREATE SET a.label = split(annotation, ';')[1] "
-            f"MERGE (p1)-[:has_named_entity]->(a)) "
-            f"FOREACH (annotation in CASE WHEN line.other_{entity_class_lower} <> 'Null' "
+            f"MERGE (a:{entity_class} {{ id: split(annotation, ';')[0] }}) "
+            f"ON CREATE SET a.text = split(annotation, ';')[1] "
+            f"ON MATCH SET a.text = split(annotation, ';')[1] "
+            f"MERGE (p1)-[:HAS_{entity_class.upper()}]->(a)) "
+            
+            f"FOREACH (annotation in CASE WHEN line.other_{entity_class_lower} <> 'Null' AND "
+            f"line.other_{entity_class_lower} IS NOT NULL "
             f"THEN split(line.other_{entity_class_lower}, ',') ELSE [] END | "
-            f"MERGE (a:{entity_class} {{ name: split(annotation, ';')[0] }}) "
-            f"ON CREATE SET a.label = split(annotation, ';')[1] "
-            f"MERGE (p2)-[:has_named_entity]->(a)) "
+            f"MERGE (a:{entity_class} {{ id: split(annotation, ';')[0] }}) "
+            f"ON CREATE SET a.text = split(annotation, ';')[1] "
+            f"ON MATCH SET a.text = split(annotation, ';')[1] "
+            f"MERGE (p2)-[:HAS_{entity_class.upper()}]->(a)) "
         )
     return ret_string
-
-def get_color_for_label(label: str = ""):
-    color = "grey"
-    if label == "chemical":
-        color = "green"
-    if label == "gene":
-        color = "orange"
-    if label == "Article":
-        color = "blue"
-    return color
 
 ## main Neo4j_Manager class
 class Neo4j_Manager:
@@ -347,21 +351,8 @@ class Neo4j_Manager:
                                      "pathway_reactome",
                                      "pathway_wikipathways", "pathway_kegg",
                                      "pathway_netpath", "pathway_biocarta",
-                                     "pathway_pid"]:
+                                     "pathway_pid", "drug"]:
                 ## pathways / GO terms are only indirectly connected
-                ## -> take genes as jump node
-                goal_jump_entity = "-->(:gene)"
-                if goal_entity_label in ["GO_BP", "GO_CC", "GO_MF"]:
-                    return_attributes = "entity.name AS name,entity.term AS term,"\
-                                    "entity.evidence AS evidence, entity.qualifier  "\
-                                    "AS qualifier, entity.gocategory AS gocategory"
-                else:
-                    return_attributes = "entity.name AS name,entity.label AS label,"\
-                                    "entity.id AS id  "
-            if goal_entity_label == "drug":
-                return_attributes = "entity.name AS name,entity.label AS label, "\
-                                    "entity.approved AS approved"
-                ## drugs are only indirectly connected
                 ## -> take genes as jump node
                 goal_jump_entity = "-->(:gene)"
 
@@ -705,8 +696,7 @@ class Neo4j_Manager:
             + " - to_values = " + str(to_values)
 
     def redirect_incoming_relationships(self, from_keys: List[str], 
-                                        from_values: List[str], 
-                                        to_keys: List[str], 
+                                        from_values: List[str], to_keys: List[str],
                                         to_values: List[str]) -> str:
         ## check for inconsitency
         if (len(from_keys) != len(from_values) \
@@ -744,8 +734,7 @@ class Neo4j_Manager:
                 + str(to_values)
 
     def redirect_outgoing_relationships(self, from_keys: List[str], 
-                                        from_values: List[str], 
-                                        to_keys: List[str], 
+                                        from_values: List[str], to_keys: List[str],
                                         to_values: List[str]) -> str:
         ## check for inconsitency
         if (len(from_keys) != len(from_values) \
@@ -1057,9 +1046,10 @@ class Neo4j_Manager:
                 concept_label = "Article"
             if concept_label == "keyword":
                 concept_label = "Keyword"
-            if concept_label in ["GO_BP", "GO_CC", "GO_MF", "pathway_kegg", \
-                                 "pathway_reactome", "pathway_wikipathways", \
-                                 "pathway_biocarta", "pathway_netpath", \
+            if concept_label in ["GO_BP", "GO_CC", "GO_MF", 
+                                 "pathway_reactome",
+                                 "pathway_wikipathways", "pathway_kegg",
+                                 "pathway_netpath", "pathway_biocarta",
                                  "pathway_pid", "drug"]:
                 ## pathways / GO terms are only indirectly connected
                 ## -> take genes as jump node
@@ -1082,6 +1072,7 @@ class Neo4j_Manager:
         if (response):
             if len(response) > 0:
                 dict_all_results = [dict(_) for _ in response ]
+
                 response_list = dict_all_results
 
         return response_list
@@ -1747,9 +1738,7 @@ class Neo4j_Manager:
             ## run tsne dim reduction
             X_embedded = TSNE(n_components=2, learning_rate='auto',
                     init='random', perplexity=30, n_iter = 2000).fit_transform(A)
-            X_embedded_annotation = pd.DataFrame(X_embedded, columns = ['x','y'])
-            X_embedded_annotation['annotation'] = annotation
-            X_embedded_annotation['labels'] = labels
+            X_embedded_annotation = pd.DataFrame({'tsne_1': X_embedded[:,0], 'tsne_2': X_embedded[:,1], 'label': labels})
             X_embedded_annotation['title'] = title
             X_embedded_annotation['id'] = ids
             X_embedded_annotation['name'] = names
@@ -1761,8 +1750,8 @@ class Neo4j_Manager:
                 if index % 5000 == 0:
                     self.logging.info("index = " + str(index))
                 id = row['id']
-                x = row['x']
-                y = row['y']
+                x = row['tsne_1']
+                y = row['tsne_2']
                 str_query = f'''
                 MATCH (n)
                 WHERE id(n) = {id}
@@ -2012,7 +2001,7 @@ class Neo4j_Manager:
         return [record["name"] for record in result]
 
     @staticmethod
-    def _create_pathway_for_gene(tx, gene_name: str, pathway_name: str,
+    def _create_pathway_for_gene(tx, gene_name: str, pathway_name: str, 
                                  pathway_label: str) -> list:
         query = (
             "MATCH (g:gene)"
