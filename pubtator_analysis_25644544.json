@@ -1,0 +1,1076 @@
+{
+  "root_tag": "collection",
+  "root_attributes": {},
+  "children": [
+    {
+      "tag": "source",
+      "attributes": {},
+      "text": "PubTator",
+      "depth": 0,
+      "children": []
+    },
+    {
+      "tag": "date",
+      "attributes": {},
+      "text": null,
+      "depth": 0,
+      "children": []
+    },
+    {
+      "tag": "key",
+      "attributes": {},
+      "text": "BioC.key",
+      "depth": 0,
+      "children": []
+    },
+    {
+      "tag": "document",
+      "attributes": {},
+      "text": null,
+      "depth": 0,
+      "children": [
+        {
+          "tag": "id",
+          "attributes": {},
+          "text": "25644544",
+          "depth": 1,
+          "children": []
+        },
+        {
+          "tag": "passage",
+          "attributes": {},
+          "text": null,
+          "depth": 1,
+          "children": [
+            {
+              "tag": "infon",
+              "attributes": {
+                "key": "journal"
+              },
+              "text": "Int J Surg. 2015 Mar;15:61-7. doi: 10.1016/j.ijsu.2015.01.030. Epub 2015 Jan 31.",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "infon",
+              "attributes": {
+                "key": "year"
+              },
+              "text": "2015",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "infon",
+              "attributes": {
+                "key": "type"
+              },
+              "text": "title",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "infon",
+              "attributes": {
+                "key": "authors"
+              },
+              "text": "Inokuchi M, Sugita H, Otsuki S, Sato Y, Nakagawa M, Kojima K",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "offset",
+              "attributes": {},
+              "text": "0",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "text",
+              "attributes": {},
+              "text": "Laparoscopic distal gastrectomy reduced surgical site infection as compared with open distal gastrectomy for gastric cancer in a meta-analysis of both randomized controlled and case-controlled studies.",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "2"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D007239",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "54",
+                    "length": "9"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "infection",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "3"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D013274",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "109",
+                    "length": "14"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "gastric cancer",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "passage",
+          "attributes": {},
+          "text": null,
+          "depth": 1,
+          "children": [
+            {
+              "tag": "infon",
+              "attributes": {
+                "key": "type"
+              },
+              "text": "abstract",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "offset",
+              "attributes": {},
+              "text": "202",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "text",
+              "attributes": {},
+              "text": "BACKGROUND: In some meta-analyses of randomized controlled trials (RCTs), laparoscopic or laparoscopy-assisted distal gastrectomy (LDG) had several short-term advantages. However, several specific postoperative complications (PCs) were not analyzed sufficiently. METHODS: RCTs and case-controlled studies (CCSs) comparing postoperative complications between LDG and open distal gastrectomy (ODG) were identified in PubMed and Embase. Studies in which patients' status, extent of lymph-node dissection, or reconstruction procedures were matched between the groups were included in a meta-analysis. Postoperative complications such as surgical-site infection (SSI; which included wound infection and intra-abdominal abscess), leakage, anastomotic stenosis, bleeding, ileus, delayed gastric emptying, pneumonia were evaluated in a meta-analysis performed using Review Manager version 5.2 software. RESULT: This meta-analysis included a total of 2144 patients (1065 underwent LDG and 1079 underwent ODG) from 5 RCTs and 13 CCSs. SSI and wound infections were reported in 14 studies, and the incidences were significantly lower in LDG than in ODG (n = 1737; odds ratio [OR] 0.50, 95% confidence interval [CI] 0.29-0.85, P = 0.01, I(2) = 0%, and OR 0.46, 95% CI 0.24-0.88, P = 0.02; I(2) = 0%). There were no significant differences in intra-abdominal abscess or other specific complications between the procedures. CONCLUSION: LDG was associated with a lower incidence of SSI, especially wound infection, as compared with ODG in a meta-analysis of both RCTs and CCSs.",
+              "depth": 2,
+              "children": []
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "23"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D011183",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "399",
+                    "length": "27"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "postoperative complications",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "24"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D011183",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "428",
+                    "length": "3"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "PCs",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "25"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D011183",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "524",
+                    "length": "27"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "postoperative complications",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "26"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "9606",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Species",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "653",
+                    "length": "8"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "patients",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "27"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D011183",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "799",
+                    "length": "27"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "Postoperative complications",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "28"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D013530",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "835",
+                    "length": "23"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "surgical-site infection",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "29"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D013530",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "860",
+                    "length": "3"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "SSI",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "30"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D014946",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "880",
+                    "length": "15"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "wound infection",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "31"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D018784",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "900",
+                    "length": "23"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "intra-abdominal abscess",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "32"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D003251",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "935",
+                    "length": "20"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "anastomotic stenosis",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "33"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D006470",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "957",
+                    "length": "8"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "bleeding",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "34"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D045823",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "967",
+                    "length": "5"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "ileus",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "35"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D011014",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1000",
+                    "length": "9"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "pneumonia",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "36"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "9606",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Species",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1149",
+                    "length": "8"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "patients",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "37"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D013530",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1227",
+                    "length": "3"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "SSI",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "38"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D014946",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1235",
+                    "length": "16"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "wound infections",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "39"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D018784",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1532",
+                    "length": "23"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "intra-abdominal abscess",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "40"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D013530",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1669",
+                    "length": "3"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "SSI",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "annotation",
+              "attributes": {
+                "id": "41"
+              },
+              "text": null,
+              "depth": 2,
+              "children": [
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "identifier"
+                  },
+                  "text": "MESH:D014946",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "infon",
+                  "attributes": {
+                    "key": "type"
+                  },
+                  "text": "Disease",
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "location",
+                  "attributes": {
+                    "offset": "1685",
+                    "length": "15"
+                  },
+                  "text": null,
+                  "depth": 3,
+                  "children": []
+                },
+                {
+                  "tag": "text",
+                  "attributes": {},
+                  "text": "wound infection",
+                  "depth": 3,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
