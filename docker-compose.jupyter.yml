@@ -1,0 +1,14 @@
+version: '3.3'
+services:
+    knowledge-graph-jupyter-service:
+        container_name: knowledge-graph-jupyter-${COMPOSE_PROJECT_NAME}
+        ports:
+            - '${PROJECT_JUPYTER_PORT}:8888'
+        image: jupyter/datascience-notebook:lab-3.0.12
+        restart: on-failure
+        volumes:
+            - './:/home/jovyan/work/'
+            - './output/${COMPOSE_PROJECT_NAME}/:/output/'
+        networks:
+            - db
+            - jupyterhub

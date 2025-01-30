@@ -1,0 +1,65 @@
+
+{
+    "0": {
+        "name": "ALS",
+        "description": "wrong annotation for ALS: liver neoplasm -> amyotrophic lateral sclerosis",
+        "method": "merge",
+        "from_keys": ["name","label"],
+        "from_values": ["Disease:MESH:D008113","ALS"],
+        "to_keys": ["name"],
+        "to_values": ["Disease:MESH:D000690"]
+    },
+    "1": {
+        "name": "ALS",
+        "description": "wrong annotation for ALS: liver neoplasm -> amyotrophic lateral sclerosis",
+        "method": "merge",
+        "from_keys": ["name","label"],
+        "from_values": ["Disease:MESH:C565957","ALS"],
+        "to_keys": ["name"],
+        "to_values": ["Disease:MESH:D000690"]
+    },
+    "2": {
+        "name": "PLS",
+        "description": "wrong annotation for PLS: Papillon-Lefevre Disease -> primary lateral sclerosis (juvenile)",
+        "method": "merge",
+        "from_keys": ["name","label"],
+        "from_values": ["Disease:MESH:D010214","PLS"],
+        "to_keys": ["name"],
+        "to_values": ["Disease:MESH:C536416"]
+    },
+    "3": {
+        "name": "Homo sapiens",
+        "description": "Homo sapiens name = human",
+        "method": "rename",
+        "from_keys": ["name"],
+        "from_values": ["Species:9606"],
+        "to_keys": ["label"],
+        "to_values": ["human"]
+    },
+    "4": {
+        "name": "alias bug",
+        "description": "fix bug: single alias was comma separated",
+        "query": "MATCH (n:gene) WITH size(n.alias) as s, size(split(n.alias, \",\")) as split_s, n WHERE s > 1 AND ((split_s*2 - 1)= s) SET n.alias = replace(n.alias, \",\", \"\") RETURN count(n)"
+    },
+    "5": {
+        "name": "ensembl_ids comma split",
+        "description": "ensembl_ids: attribute comma split with space",
+        "query": "MATCH (n:gene) SET n.ensembl_ids = apoc.text.replace(n.ensembl_ids, '[,](?=[^\\s])', ', ') RETURN count(n)"
+    },
+    "6": {
+        "name": "alias comma split",
+        "description": "alias: attribute comma split with space",
+        "query": "MATCH (n:gene) SET n.alias = apoc.text.replace(n.alias, '[,](?=[^\\s])', ', ') RETURN count(n)"
+    },
+    "7": {
+        "name": "ALS Disease:Null",
+        "description": "missing normalization for amyotrophic lateral sclerosis ",
+        "method": "merge",
+        "from_keys": ["name","label"],
+        "from_values": ["Disease:Null","amyotrophic lateral sclerosis"],
+        "to_keys": ["name"],
+        "to_values": ["Disease:MESH:D000690"]
+    }
+
+
+}

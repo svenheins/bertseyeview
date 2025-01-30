@@ -1,0 +1,20 @@
+version: '3.3'
+services:
+    neo4j-service:
+        ports:
+            - '${PROJECT_NEO4J_HTTP_PORT}:7474'
+            - '${PROJECT_NEO4J_HTTPS_PORT}:7473'
+            - '${PROJECT_NEO4J_BOLT_PORT}:7687'
+        networks:
+            - db
+            - jupyterhub
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.kg-${COMPOSE_PROJECT_NAME}-neo4j-rule-name.rule=Host(`kg-${COMPOSE_PROJECT_NAME}-neo4j.int.ims.bio`)"
+            - "traefik.http.services.kg-${COMPOSE_PROJECT_NAME}-neo4j-rule-name.loadbalancer.server.port=7473"
+
+networks:
+    traefik:
+        external: true
+

@@ -1,0 +1,6 @@
+version: '3.3'
+
+services:
+    knowledge-graph-streamlit:
+        ports:
+            - '${PROJECT_FRONTEND_HTTP_PORT}:8501'

@@ -1,0 +1,7 @@
+version: '3.3'
+services:
+    knowledge-graph-api-service:
+        labels:
+            - "traefik.http.routers.kg-${COMPOSE_PROJECT_NAME}-api-rule-name.middlewares=dbauth"
+            - "traefik.http.middlewares.dbauth.basicauth.usersfile=/configuration/auth/users"
+

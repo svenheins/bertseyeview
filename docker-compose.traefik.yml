@@ -1,0 +1,15 @@
+version: '3.3'
+services:
+    knowledge-graph-api-service:
+        networks:
+            - db
+            - jupyterhub
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.kg-${COMPOSE_PROJECT_NAME}-api-rule-name.rule=Host(`kg-${COMPOSE_PROJECT_NAME}-api.${PROJECT_DOMAIN}`)"
+            - "traefik.http.services.kg-${COMPOSE_PROJECT_NAME}-api-rule-name.loadbalancer.server.port=5000"
+            
+networks:
+    traefik:
+        external: true    

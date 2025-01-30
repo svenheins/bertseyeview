@@ -1,0 +1,84 @@
+version: "3.3"
+services:
+  neo4j-service:
+    restart: unless-stopped
+    container_name: neo4j-knowledge-graph-${COMPOSE_PROJECT_NAME}
+    volumes:
+      - "./data/${COMPOSE_PROJECT_NAME}/neo4j/data:/data"
+      - "./data/${COMPOSE_PROJECT_NAME}/neo4j/var/lib/neo4j/import/data/citations.csv:/var/lib/neo4j/import/data/citations.csv"
+      - "./knowledge-graph-neo4j/neo4j_plugins/:/plugins/"
+    build:
+      context: knowledge-graph-neo4j
+      dockerfile: Dockerfile
+    user: ${USER_ID}:${GROUP_ID}
+    environment:
+      - NEO4J_AUTH=neo4j/yourpasswordhere
+    healthcheck:
+      test: wget http://neo4j-knowledge-graph-${COMPOSE_PROJECT_NAME}:7474/browser -O -
+      interval: 3s
+      timeout: 2s
+      retries: 3
+    ## the plugins are added by mounting the neo4j_plugins-directory and adding some lines to the config, which is also mounted
+    #            - NEO4JLABS_PLUGINS=["apoc"] #, "graph-data-science"]
+    networks:
+      - db
+      - jupyterhub
+    deploy:
+      resources:
+        limits:
+          cpus: "32"
+          memory: "56g"
+
+  knowledge-graph-manager-service:
+    container_name: knowledge-graph-manager-${COMPOSE_PROJECT_NAME}
+    depends_on:
+      - "neo4j-service"
+    build:
+      context: knowledge-graph-manager
+      dockerfile: Dockerfile
+    user: ${USER_ID}:${GROUP_ID}
+    restart: unless-stopped
+    volumes:
+      - "./input/${COMPOSE_PROJECT_NAME}/:/input/"
+      - "./input/global/:/global/"
+      - "./output/${COMPOSE_PROJECT_NAME}/:/output/"
+      - "./data/${COMPOSE_PROJECT_NAME}/neo4j/var/lib/neo4j/import/data/citations.csv:/neo4j/citations.csv"
+      - "./shared/helper/:/helper/"
+    networks:
+      - db
+      - jupyterhub
+    deploy:
+      resources:
+        limits:
+          cpus: "8"
+          memory: "16g"
+  knowledge-graph-api-service:
+    container_name: knowledge-graph-api-${COMPOSE_PROJECT_NAME}
+    depends_on:
+      - "neo4j-service"
+    build:
+      context: knowledge-graph-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - USE_HTTPS=${USE_HTTPS}
+    volumes:
+      - "./input/${COMPOSE_PROJECT_NAME}/:/input/"
+      - "./input/global/:/global/"
+      - "./output/${COMPOSE_PROJECT_NAME}/:/output/"
+      - "./shared/helper/:/code/helper/"
+    networks:
+      - db
+      - jupyterhub
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "2g"
+
+networks:
+  db:
+  jupyterhub:
+    external: true
+  traefik:
+    external: true

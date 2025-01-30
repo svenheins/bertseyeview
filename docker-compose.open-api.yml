@@ -1,0 +1,6 @@
+version: '3.3'
+services:
+    knowledge-graph-api-service:
+        container_name: knowledge-graph-api-${COMPOSE_PROJECT_NAME}
+        ports:
+            - '${PROJECT_API_PORT}:5000'

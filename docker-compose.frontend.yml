@@ -1,0 +1,37 @@
+version: '3.3'
+
+services:
+    knowledge-graph-streamlit:
+        build:
+            context: knowledge-graph-streamlit/docker
+        restart: unless-stopped
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.kg-${COMPOSE_PROJECT_NAME}-streamlit-rule-name.rule=Host(`${COMPOSE_PROJECT_NAME}.${PROJECT_DOMAIN}`)"
+            - "traefik.http.services.kg-${COMPOSE_PROJECT_NAME}-streamlit-rule-name.loadbalancer.server.port=8501"
+            #- "traefik.http.routers.kg-${COMPOSE_PROJECT_NAME}-streamlit-rule-name.middlewares=dbauth"
+            #- "traefik.http.middlewares.dbauth.basicauth.usersfile=/configuration/auth/users"
+            - "traefik.http.routers.kg-${COMPOSE_PROJECT_NAME}-streamlit-rule-name.tls.certresolver=letsencrypt"
+        volumes:
+            - './knowledge-graph-streamlit/pages/:/app/pages'
+            #- './knowledge-graph-streamlit/cert/:/app/cert'
+            - './knowledge-graph-streamlit/src/:/app/src'
+            - './knowledge-graph-streamlit/1_Search.py:/app/1_Search.py'
+            - './knowledge-graph-streamlit/media:/app/media'
+            - './input/${COMPOSE_PROJECT_NAME}/config.ini:/app/config.ini'
+            - './shared/helper/:/app/helper/'
+            - './output/${COMPOSE_PROJECT_NAME}/:/output/'
+            - './input/${COMPOSE_PROJECT_NAME}/:/input/'
+        networks:
+            - traefik
+            - db
+        deploy:
+            resources:
+                limits:
+                    cpus: "4"
+                    memory: "8g"
+
+networks:
+    db:
+    traefik:
+        external: true
