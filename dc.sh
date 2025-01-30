@@ -21,10 +21,10 @@ printf " -n: Argument project_name is %s\n" "$project_name"
 printf " -c: Argument command is %s\n" "$command"
 
 while true; do
-    echo "The command is 'docker-compose "$command"' on project "$project_name
+    echo "The command is 'docker compose "$command"' on project "$project_name
     read -p "Are you sure that you want run this command? (y / n) " yn
     case $yn in
-        [Yy]* ) echo "OK, running docker-compose "$command" on project "$project_name" now.";
+        [Yy]* ) echo "OK, running docker compose "$command" on project "$project_name" now.";
                 break;;
         [Nn]* ) echo "Exiting script (no docker-compose "$command" is executed)";
                 exit 1;;
@@ -35,7 +35,7 @@ done
 
 FILE=./.env.$project_name
 if [ -f "$FILE" ]; then
-    echo "$FILE exists. Continue with docker-compose "$command
+    echo "$FILE exists. Continue with dockerc ompose "$command
     export $(cat .env.$project_name)
     export USER_ID=$(id -u)
     export GROUP_ID=$(id -g)
@@ -69,7 +69,7 @@ if [ -f "$FILE" ]; then
       ADD_DOCKER_COMPOSE_YML=$ADD_DOCKER_COMPOSE_YML" -f docker-compose.frontend-open-port.yml" 
     fi
     echo "The following yml-files will be attached to the docker-compose command: "$ADD_DOCKER_COMPOSE_YML
-    env $(cat .env.$project_name) docker-compose -f docker-compose.yml $ADD_DOCKER_COMPOSE_YML $command
+    env $(cat .env.$project_name) docker compose -f docker-compose.yml $ADD_DOCKER_COMPOSE_YML $command
 else 
     echo "$FILE does not exist. Exiting..."
 fi
