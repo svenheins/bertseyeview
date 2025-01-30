@@ -1,0 +1,68 @@
+
+{
+    "genes": {
+        "goal_entity_label": "gene",
+        "goal_entity_attribute": "taxid",
+        "goal_entity_operator": "=",
+        "goal_entity_value": "9606",
+        "list_filter_entity_labels": ["disease"], 
+        "list_filter_entity_attributes": ["name"], 
+        "list_filter_entity_operators": ["="],
+        "list_filter_entity_values": ["Disease:MESH:D000690"],
+        "goal_entity_min_mentions": 10,
+        "sort_string": "score DESC",
+        "options": ""
+    },
+    "diseases": {
+        "goal_entity_label": "disease",
+        "goal_entity_attribute": "",
+        "goal_entity_operator": "",
+        "goal_entity_value": "",
+        "list_filter_entity_labels": ["disease"], 
+        "list_filter_entity_attributes": ["name"], 
+        "list_filter_entity_operators": ["="],
+        "list_filter_entity_values": ["Disease:MESH:D000690"],
+        "goal_entity_min_mentions": 10,
+        "sort_string": "score DESC",
+        "options": ""
+    },
+    "chemicals": {
+        "goal_entity_label": "chemical",
+        "goal_entity_attribute": "",
+        "goal_entity_operator": "",
+        "goal_entity_value": "",
+        "list_filter_entity_labels": ["disease"], 
+        "list_filter_entity_attributes": ["name"], 
+        "list_filter_entity_operators": ["="],
+        "list_filter_entity_values": ["Disease:MESH:D000690"],
+        "goal_entity_min_mentions": 10,
+        "sort_string": "score DESC",
+        "options": ""
+    },
+    "articles-normalized": {
+        "goal_entity_label": "article",
+        "goal_entity_attribute": "",
+        "goal_entity_operator": "",
+        "goal_entity_value": "",
+        "list_filter_entity_labels": ["disease"], 
+        "list_filter_entity_attributes": ["name"], 
+        "list_filter_entity_operators": ["="],
+        "list_filter_entity_values": ["Disease:MESH:D000690"],
+        "goal_entity_min_mentions": 10,
+        "sort_string": "score DESC",
+        "options": "normalize_by_age"
+    },
+    "articles-unnormalized": {
+        "goal_entity_label": "article",
+        "goal_entity_attribute": "",
+        "goal_entity_operator": "",
+        "goal_entity_value": "",
+        "list_filter_entity_labels": ["disease"], 
+        "list_filter_entity_attributes": ["name"], 
+        "list_filter_entity_operators": ["="],
+        "list_filter_entity_values": ["Disease:MESH:D000690"],
+        "goal_entity_min_mentions": 10,
+        "sort_string": "score DESC",
+        "options": ""
+    }
+}
