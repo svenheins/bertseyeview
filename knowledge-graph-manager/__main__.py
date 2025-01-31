@@ -953,34 +953,53 @@ def create_citation_csv(
     bioconcepts: str,
     run_pubtator: bool = True,
 ) -> int:
-    reference_id = reference_id_start
+    article_annotations = "|".join(["article_" + a for a in bioconcepts.split(",")])
+    reference_annotations = "|".join(["reference_" + a for a in bioconcepts.split(",")])
+    csv_header = "|".join(
+        [
+            "reference_id",
+            "article",
+            "article_title",
+            "article_pmc_id",
+            "article_epubdate",
+            "article_authors",
+            "article_journal",
+            "article_abstract",
+            "article_keywords",
+            article_annotations,
+            "reference",
+            "reference_title",
+            "reference_pmc_id",
+            "reference_epubdate",
+            "reference_authors",
+            "reference_journal",
+            "reference_abstract",
+            "reference_keywords",
+            reference_annotations,
+        ]
+    )
     csv_content = ""
-    csv_header = ("reference_id|article_id|article_title|article_epubdate|"
-                 "article_authors|article_journal|article_abstract|article_keywords|"
-                 "article_disease|article_gene|article_chemical|article_species|article_mutation|"
-                 "other_reference_id|other_article_id|other_title|other_epubdate|"
-                 "other_authors|other_journal|other_abstract|other_keywords|"
-                 "other_disease|other_gene|other_chemical|other_species|other_mutation|"
-                 "article_GO_BP|article_GO_CC|article_GO_MF|article_pathway_kegg|"
-                 "article_pathway_reactome|article_pathway_wikipathways")
+    csv_text = csv_header
     csv_header_column_count = len(csv_header.split("|"))
-    csv_content = csv_header + "\n"
-    ## first article
-    article_id = str(article_meta.index[0])
+    reference_id = reference_id_start
+    article_id = str(doi)
+
     article_title = article_meta.loc[article_id, "title"].replace("|", ";")
+    article_pmc_id = article_meta.loc[article_id, "pmc_id"].replace("|", ";")
     article_epubdate = article_meta.loc[article_id, "epubdate"].replace("|", ";")
-    article_authors = article_meta.loc[article_id, "authors"].replace("|", ";")
+    article_authors = get_author_string(article_meta.loc[article_id, "authors"])
     article_journal = article_meta.loc[article_id, "journal"].replace("|", ";")
     article_abstract = article_meta.loc[article_id, "abstract"].replace("|", ";")
-    article_annotations = article_meta.loc[article_id, "annotations"]
+    article_search_for_terms = " ".join([article_title, article_abstract])
 
     ## only add lines, if at least the DOI is relevant with respect to
     # the search-terms
-    article_search_for_terms = " ".join([article_title, article_abstract])
     if is_relevant(article_search_for_terms, filter_terms):
         article_keywords = get_relevant_keywords(
             article_search_for_terms, additional_keywords
         )
+        article_annotations = article_meta.loc[article_id, "annotations"]
+
         csv_content_old = csv_content
 
         # citations (article is cited by the list of publications)
@@ -1004,7 +1023,7 @@ def create_citation_csv(
             bioconcepts,
             article_id,
             article_title,
-            "",
+            article_pmc_id,
             article_epubdate,
             article_authors,
             article_journal,
@@ -1036,7 +1055,7 @@ def create_citation_csv(
             bioconcepts,
             article_id,
             article_title,
-            "",
+            article_pmc_id,
             article_epubdate,
             article_authors,
             article_journal,
@@ -1058,6 +1077,7 @@ def create_citation_csv(
                         str(reference_id),
                         article_id,
                         article_title,
+                        article_pmc_id,
                         article_epubdate,
                         article_authors,
                         article_journal,
@@ -1070,12 +1090,6 @@ def create_citation_csv(
                         other_abstract,
                         ",".join(other_keywords),
                         other_annotations,
-                        "Null",
-                        "Null",
-                        "Null",
-                        "Null",
-                        "Null",
-                        "Null",
                     ]
                 )
                 + "\n"
@@ -1083,7 +1097,7 @@ def create_citation_csv(
             csv_content += csv_candidate
             reference_id += 1
 
-    csv_text = csv_content
+    csv_text = csv_header + "\n" + csv_content
     csv_text = csv_text.replace('"', "")
 
     ## write to file, that can be accessed from neo4j (neo4j is
