@@ -335,7 +335,7 @@ def get_meta_data(
 
         if run_pubtator == True:
             pubtator_url = (
-                "https://www.ncbi.nlm.nih.gov/research/pubtator-api/"
+                "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
                 "publications/export/pubtator?pmids=" + pubmed_ids_join + "&concepts"
                 "=" + bioconcepts
             )
@@ -560,8 +560,8 @@ def get_meta_data(
 
                                         if run_pubtator == True:
                                             pubtator_url_pmc = (
-                                                "https://www.ncbi.nlm.nih.gov/research/pubtator-api/publications/export/biocxml?pmcids="
-                                                + str(pmc_id)
+                                                "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/publications/export/biocxml?pmids="
+                                                + str(pubmed_id) + "&full=true"
                                             )
                                             successful_request = False
                                             count_requests = 0
