@@ -328,6 +328,8 @@ def get_meta_data(
     for pubmed_ids_batch in batch(range(0, len(pubmed_ids_all_batches)), batch_size):
         pubmed_ids = [str(pubmed_ids_all_batches[i]) for i in list(pubmed_ids_batch)]
         pubmed_ids_join = ",".join([str(pubmed_id_str) for pubmed_id_str in pubmed_ids])
+        
+        logging.info(f"Processing batch of PMIDs: {pubmed_ids}")
 
         if run_pubtator:
             pubtator_url = (
@@ -336,7 +338,7 @@ def get_meta_data(
             )
             successful_request = False
             count_requests = 0
-            while successful_request != True:
+            while successful_request != True and count_requests < 3:  # Limit retries
                 pubtator_response = request_with_delay(pubtator_url)
                 count_requests += 1
                 if count_requests > 1:
@@ -344,9 +346,31 @@ def get_meta_data(
                 if pubtator_response != None:
                     pubtator_text = pubtator_response.content.decode("utf-8")
                     try:
+                        logging.debug(f"Received PubTator response: {pubtator_text[:500]}...")
                         root = ET.fromstring(pubtator_text)
+                        
                         for document in root.findall('.//document'):
-                            pubmed_id_pubtator = document.get('id', '')
+                            # Get PubMed ID from passage infon
+                            pubmed_id_pubtator = None
+                            pmc_id_pubtator = None
+                            for id in document.findall('.//id'):
+                                pubmed_id_pubtator = id.text
+                            for passage in document.findall('.//passage'):
+                                for infon in passage.findall('.//infon'):
+                                    if infon.get('key') == 'article-id_pmid':
+                                        pubmed_id_pubtator = infon.text
+                                        break
+                                    if infon.get('key') == 'article-id_pmc':
+                                        pmc_id_pubtator = infon.text
+                                        break
+                                if pubmed_id_pubtator:
+                                    break
+                            
+                            if not pubmed_id_pubtator:
+                                logging.warning("Could not find PMID in PubTator response")
+                                continue
+                                
+                            logging.info(f"Processing PMID from PubTator: {pubmed_id_pubtator}")
                             
                             # Initialize PubTator variables
                             title_pubtator = ""
@@ -357,7 +381,8 @@ def get_meta_data(
                                 'gene': 'Null',
                                 'chemical': 'Null',
                                 'species': 'Null',
-                                'mutation': 'Null'
+                                'mutation': 'Null',
+                                'cellline': 'Null'
                             }
                             
                             # Process passages
@@ -370,21 +395,24 @@ def get_meta_data(
                                         text_elem = passage.find('.//text')
                                         if text_elem is not None and text_elem.text:
                                             title_pubtator = text_elem.text
+                                            logging.debug(f"Found title: {title_pubtator}")
                                     # Get abstract
                                     elif type_elem.text == "abstract":
                                         text_elem = passage.find('.//text')
                                         if text_elem is not None and text_elem.text:
                                             abstract_pubtator = text_elem.text
+                                            logging.debug(f"Found abstract: {abstract_pubtator[:100]}...")
                                 
                                 # Get authors
                                 authors_elem = passage.find('.//infon[@key="authors"]')
                                 if authors_elem is not None and authors_elem.text:
                                     authors_pubtator = authors_elem.text
+                                    logging.debug(f"Found authors: {authors_pubtator}")
                             
                             # Process annotations
                             entity_annotations = {
                                 'Disease': [], 'Gene': [], 'Chemical': [], 
-                                'Species': [], 'Mutation': []
+                                'Species': [], 'Mutation': [], 'CellLine': []
                             }
                             
                             for annotation in document.findall('.//annotation'):
@@ -398,15 +426,17 @@ def get_meta_data(
                                         entity_id = id_elem.text
                                         entity_text = text_elem.text
                                         
+                                        logging.debug(f"Found annotation - Type: {entity_type}, ID: {entity_id}, Text: {entity_text}")
+                                        
                                         # Skip invalid IDs
                                         if entity_id == "-" or not entity_id:
                                             logging.warning(f"Skipping invalid entity ID for {entity_type}: {entity_text}")
                                             continue
                                             
                                         if entity_type in entity_annotations:
-                                            annotation_str = f"{entity_id};{entity_text}"
+                                            annotation_str = f"{entity_type}:{entity_id};{entity_text}"
                                             entity_annotations[entity_type].append(annotation_str)
-                                            logging.debug(f"Found {entity_type} annotation: {annotation_str}")
+                                            logging.debug(f"Added {entity_type} annotation: {annotation_str}")
                                 except Exception as e:
                                     logging.error(f"Error processing annotation: {str(e)}")
                                     continue
@@ -419,61 +449,95 @@ def get_meta_data(
                                     logging.debug(f"Final {entity_type} annotations: {annotations_pubtator[entity_type_lower]}")
                                 else:
                                     annotations_pubtator[entity_type_lower] = 'Null'
-                                    
-                            entry_meta = {
+                                    logging.debug(f"No {entity_type} annotations found")
+                            
+                            pubtator_meta[pubmed_id_pubtator] = {
                                 "title": title_pubtator,
                                 "abstract": abstract_pubtator,
                                 "annotations": annotations_pubtator,
                                 "authors": authors_pubtator
                             }
-                            pubtator_meta[pubmed_id_pubtator] = entry_meta
-                            
+                            logging.info(f"Successfully processed PubTator data for PMID {pubmed_id_pubtator}")
+                        
+                        successful_request = True
                     except ET.ParseError as e:
-                        logging.error(f"Failed to parse XML: {str(e)}")
-                        continue
-                    successful_request = True
+                        logging.error(f"XML parsing error: {str(e)}")
+                        if count_requests >= 3:
+                            logging.error("Maximum retry attempts reached for PubTator request")
+                            successful_request = True  # Exit the retry loop
+                    except Exception as e:
+                        logging.error(f"Error processing PubTator response: {str(e)}")
+                        if count_requests >= 3:
+                            logging.error("Maximum retry attempts reached for PubTator request")
+                            successful_request = True  # Exit the retry loop
                 else:
-                    logging.info("Request failed: " + pubtator_url)
-
+                    logging.error("Failed to get response from PubTator")
+                    if count_requests >= 3:
+                        logging.error("Maximum retry attempts reached for PubTator request")
+                        successful_request = True  # Exit the retry loop
+                
+                time.sleep(1)  # Add delay between retries
         ## meta part: retrieve epubdate, authors and journal
         meta_url = (
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-            "?db=pubmed&id=" + pubmed_ids_join + "&retmode=json&tool=my_tool"
-            "&email=my_email@example.com"
+            f"?db=pubmed&id={pubmed_ids_join}&retmode=json"
         )
-        meta_response = request_with_delay(meta_url)
-        if meta_response != None:
-            meta_json = meta_response.json()
-            for pubmed_id in pubmed_ids:
-                pubmed_id = str(pubmed_id)
-                if pubmed_id in pubtator_meta:
-                    title_list.append(pubtator_meta[pubmed_id]["title"])
-                    abstract_list.append(pubtator_meta[pubmed_id]["abstract"])
-                    annotations_list.append(pubtator_meta[pubmed_id]["annotations"])
-                    authors_list.append(pubtator_meta[pubmed_id]["authors"])
-                else:
-                    title_list.append("")
-                    abstract_list.append("")
-                    annotations_list.append({
-                        'disease': 'Null',
-                        'gene': 'Null',
-                        'chemical': 'Null',
-                        'species': 'Null',
-                        'mutation': 'Null'
-                    })
-                    authors_list.append("")
+        
+        retry_count = 0
+        max_retries = 3
+        while retry_count < max_retries:
+            meta_response = request_with_delay(meta_url, api_delay=0.5)  # Add delay between E-utils requests
+            if meta_response is not None:
+                try:
+                    meta_json = meta_response.json()
+                    logging.debug(f"E-utils response: {json.dumps(meta_json, indent=2)[:500]}...")
+                    
+                    for pubmed_id in pubmed_ids:
+                        pubmed_id = str(pubmed_id)
+                        logging.info(f"Processing metadata for PMID {pubmed_id}")
+                        
+                        if pubmed_id in pubtator_meta:
+                            logging.debug(f"Found PubTator data for PMID {pubmed_id}")
+                            title_list.append(pubtator_meta[pubmed_id]["title"])
+                            abstract_list.append(pubtator_meta[pubmed_id]["abstract"])
+                            annotations_list.append(pubtator_meta[pubmed_id]["annotations"])
+                            authors_list.append(pubtator_meta[pubmed_id]["authors"])
+                        else:
+                            logging.warning(f"No PubTator data found for PMID {pubmed_id}")
+                            title_list.append("")
+                            abstract_list.append("")
+                            annotations_list.append({
+                                'disease': 'Null',
+                                'gene': 'Null',
+                                'chemical': 'Null',
+                                'species': 'Null',
+                                'mutation': 'Null',
+                                'cellline': 'Null'
+                            })
+                            authors_list.append("")
 
-                if pubmed_id in meta_json["result"]:
-                    meta_result = meta_json["result"][pubmed_id]
-                    sortpubdate_list.append(meta_result.get("sortpubdate", ""))
-                    epubdate_list.append(meta_result.get("epubdate", ""))
-                    journal_list.append(meta_result.get("fulljournalname", ""))
+                        if pubmed_id in meta_json.get("result", {}):
+                            meta_result = meta_json["result"][pubmed_id]
+                            sortpubdate_list.append(meta_result.get("sortpubdate", ""))
+                            epubdate_list.append(meta_result.get("epubdate", ""))
+                            journal_list.append(meta_result.get("fulljournalname", ""))
+                            logging.debug(f"Added metadata for PMID {pubmed_id}")
+                        else:
+                            logging.warning(f"No E-utils metadata found for PMID {pubmed_id}")
+                            sortpubdate_list.append("")
+                            epubdate_list.append("")
+                            journal_list.append("")
+                except Exception as e:
+                    logging.error(f"Error processing E-utils response: {str(e)}")
+                    retry_count += 1
                 else:
-                    sortpubdate_list.append("")
-                    epubdate_list.append("")
-                    journal_list.append("")
+                    break
+            else:
+                logging.error("Failed to get response from E-utils")
+                retry_count += 1
 
-    return pd.DataFrame({
+    # Create DataFrame
+    df = pd.DataFrame({
         "pubmed_id": pubmed_ids_all_batches,
         "title": title_list,
         "abstract": abstract_list,
@@ -483,6 +547,50 @@ def get_meta_data(
         "journal": journal_list,
         "annotations": annotations_list
     })
+
+    logging.info(f"Final DataFrame shape: {df.shape}")
+    logging.debug(f"DataFrame head:\n{df.head()}")
+
+    # Print results for each PMID
+    for _, row in df.iterrows():
+        logging.info("\n" + "=" * 80)
+        logging.info(f"Results for PMID {row['pubmed_id']}:")
+        logging.info(f"Title: {row['title']}")
+        logging.info(f"Authors: {row['authors']}")
+        logging.info(f"Journal: {row['journal']}")
+        logging.info("\nAnnotations:")
+        for entity_type, annotations in row['annotations'].items():
+            logging.info(f"{entity_type}: {annotations}")
+        logging.info("=" * 80 + "\n")
+
+    return df
+
+
+def is_relevant(str_candidate: str, search_terms: List[str]) -> bool:
+    relevant = False
+    if len(search_terms) > 0:
+        for term in search_terms:
+            if str(term).lower() in str(str_candidate).lower():
+                relevant = True
+                break
+    else:
+        ## if there is no filter, always return True for relevant
+        relevant = True
+    return relevant
+
+
+def get_relevant_keywords(str_candidate: str, search_terms: List[str]) -> List[str]:
+    relevant = ["Null"]
+    if len(search_terms) > 0:
+        for term in search_terms:
+            if str(term).lower() in str(str_candidate).lower():
+                ## add to the beginning of the list
+                relevant.insert(0, term)
+        ## if there are more than one items, remove the last (Null-item)
+        if len(relevant) > 1:
+            relevant = relevant[:-1]
+    return relevant
+
 
 ## simple helper function to remove quotation from comma-separated values
 def get_list_from_csv_string(
@@ -858,7 +966,7 @@ def create_citation_csv(
     csv_header_column_count = len(csv_header.split("|"))
     csv_content = csv_header + "\n"
     ## first article
-    article_id = article_meta.index[0]
+    article_id = str(article_meta.index[0])
     article_title = article_meta.loc[article_id, "title"].replace("|", ";")
     article_epubdate = article_meta.loc[article_id, "epubdate"].replace("|", ";")
     article_authors = article_meta.loc[article_id, "authors"].replace("|", ";")
