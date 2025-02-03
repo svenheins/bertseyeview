@@ -11,16 +11,13 @@ import requests
 import re
 import json
 import logging
+import xml.etree.ElementTree as ET
 
 from typing import List, Set, Dict, Tuple
 from neo4j import GraphDatabase
-from xml.etree import ElementTree
 from datetime import datetime, timedelta
 
 from helper.neo4j_helper import Neo4j_Manager
-
-import bioc
-
 
 ## setup the logger to print to stdout and to the file
 log_path = "/output"
@@ -312,7 +309,7 @@ def get_meta_data(
     pubmed_ids_all_batches: list,
     bioconcepts: str = "none",
     batch_size: int = 100,
-    run_pubtator: bool = True,
+    run_pubtator=True,
 ) -> pd.DataFrame:
     title_list = []
     abstract_list = []
@@ -321,7 +318,6 @@ def get_meta_data(
     epubdate_list = []
     authors_list = []
     journal_list = []
-    pmc_id_list = []
 
     ## pubtator part: retrieve title, abstract and annotations
     pubtator_text = None
@@ -348,97 +344,129 @@ def get_meta_data(
                     logging.info("count_requests = " + str(count_requests))
                 if pubtator_response != None:
                     pubtator_text = pubtator_response.content.decode("utf-8")
-
-                    pubtator_text_split = pubtator_text.split("\n\n")[:-1]
-                    for entry in pubtator_text_split:
-                        concept_annotation = ""
-                        annotations_all = ""
-                        entry_meta = {}
-                        for index, text in enumerate(entry.split("\n")):
-                            if index > 1:
-                                break
-                            else:
-                                if index == 0:
-                                    if len(text.split("|")) == 3:
-                                        pubmed_id_pubtator = text.split("|")[0]
-                                        title_pubtator = text.split("|")[2]
-                                    else:
-                                        logging.info("error: not the pubtator format")
-                                        logging.info(text)
-                                else:
-                                    if len(text.split("|")) == 3:
-                                        abstract_pubtator = text.split("|")[2]
-                                    else:
-                                        logging.info("error: not the pubtator format")
-                                        logging.info(text)
-                        entry_meta["title"] = title_pubtator
-                        entry_meta["abstract"] = abstract_pubtator
-
-                        for bioconcept in bioconcepts_list:
-                            annotations_pubtator = "Null"
-                            for index, text in enumerate(entry.split("\n")):
-                                if index <= 1:
-                                    ## title and abstract -> skip
-                                    pass
-
-                                else:
-                                    if len(text.split("\t")) > 3:
-                                        annotation = text.split("\t")[3]
-                                        concept = text.split("\t")[4]
-                                        ## only treat the current bioconcept
-                                        # (we need to process the concepts in
-                                        # correct order)
-                                        if concept.lower() == bioconcept.lower():
-                                            normalized_annotation = text.split("\t")[5]
-                                            concept_annotation = (
-                                                concept
-                                                + ":"
-                                                + normalized_annotation
-                                                + ";"
-                                                + annotation
-                                            )
-                                            if annotations_pubtator.endswith(
-                                                concept_annotation
-                                            ):
-                                                continue
-                                            else:
-                                                if (
-                                                    concept_annotation + ","
-                                                    in annotations_pubtator
-                                                ):
-                                                    # skip if the annotation is
-                                                    # already part of the annotation
-                                                    # (we are only interested in unique annotations)
-                                                    continue
-                                                else:
-                                                    annotations_pubtator = ",".join(
-                                                        [
-                                                            annotations_pubtator,
-                                                            concept_annotation,
-                                                        ]
-                                                    )
-                                        else:
+                    try:
+                        root = ET.fromstring(pubtator_text)
+                        for document in root.findall('.//document'):
+                            pubmed_id_pubtator = document.get('id', '')
+                            
+                            # Initialize PubTator variables
+                            title_pubtator = ""
+                            abstract_pubtator = ""
+                            authors_pubtator = ""
+                            annotations_pubtator = {
+                                'disease': 'Null',
+                                'gene': 'Null',
+                                'chemical': 'Null',
+                                'species': 'Null',
+                                'mutation': 'Null'
+                            }
+                            
+                            # Get metadata from PubTator
+                            if run_pubtator and pubmed_id_pubtator:  # Check for valid PMID
+                                try:
+                                    pubtator_url = (
+                                        "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
+                                        "publications/export/biocxml?pmids="
+                                        + str(pubmed_id_pubtator)
+                                        + "&full=true"
+                                    )
+                                    pubtator_response = request_with_delay(pubtator_url)
+                                    if pubtator_response is not None and pubtator_response.content:
+                                        pubtator_text = pubtator_response.content.decode("utf-8")
+                                        if not pubtator_text.strip():
+                                            logging.warning(f"Empty PubTator response for PMID {pubmed_id_pubtator}")
                                             continue
-                            ## if there is more than just "Null"
-                            if len(annotations_pubtator) > 4:
-                                annotations_pubtator = annotations_pubtator[5:]
-                            annotations_all = "|".join(
-                                [annotations_all, annotations_pubtator]
-                            )
-                        if len(annotations_all) > 0:
-                            annotations_all = annotations_all[1:]
-                        entry_meta["annotations"] = annotations_all
-                        pubtator_meta[pubmed_id_pubtator] = entry_meta
+                                            
+                                        root = ET.fromstring(pubtator_text)
+                                        
+                                        # Find the document element
+                                        document = root.find('.//document')
+                                        if document is None:
+                                            logging.warning(f"No document element found for PMID {pubmed_id_pubtator}")
+                                            continue
+                                        
+                                        # Process passages
+                                        for passage in document.findall('.//passage'):
+                                            # Get type
+                                            type_elem = passage.find('.//infon[@key="type"]')
+                                            if type_elem is not None:
+                                                # Get title
+                                                if type_elem.text == "title":
+                                                    text_elem = passage.find('.//text')
+                                                    if text_elem is not None and text_elem.text:
+                                                        title_pubtator = text_elem.text
+                                                # Get abstract
+                                                elif type_elem.text == "abstract":
+                                                    text_elem = passage.find('.//text')
+                                                    if text_elem is not None and text_elem.text:
+                                                        abstract_pubtator = text_elem.text
+                                            
+                                            # Get authors
+                                            authors_elem = passage.find('.//infon[@key="authors"]')
+                                            if authors_elem is not None and authors_elem.text:
+                                                authors_pubtator = authors_elem.text
+                                        
+                                        # Process annotations
+                                        entity_annotations = {
+                                            'Disease': [], 'Gene': [], 'Chemical': [], 
+                                            'Species': [], 'Mutation': []
+                                        }
+                                        
+                                        for annotation in document.findall('.//annotation'):
+                                            try:
+                                                type_elem = annotation.find('.//infon[@key="type"]')
+                                                id_elem = annotation.find('.//infon[@key="identifier"]')
+                                                text_elem = annotation.find('.//text')
+                                                
+                                                if all([type_elem is not None, id_elem is not None, text_elem is not None]):
+                                                    entity_type = type_elem.text
+                                                    entity_id = id_elem.text
+                                                    entity_text = text_elem.text
+                                                    
+                                                    if entity_type in entity_annotations:
+                                                        annotation_str = f"{entity_id};{entity_text}"
+                                                        entity_annotations[entity_type].append(annotation_str)
+                                            except Exception as e:
+                                                logging.error(f"Error processing annotation: {str(e)}")
+                                                continue
+                                        
+                                        # Convert annotations to final format
+                                        for entity_type, annotations in entity_annotations.items():
+                                            entity_type_lower = entity_type.lower()
+                                            if annotations:
+                                                annotations_pubtator[entity_type_lower] = ','.join(annotations)
+                                            else:
+                                                annotations_pubtator[entity_type_lower] = 'Null'
+                                                
+                                except ET.ParseError as e:
+                                    logging.error(f"XML Parse error for PMID {pubmed_id_pubtator}: {str(e)}")
+                                    if pubtator_response is not None:
+                                        logging.error(f"Raw content: {pubtator_response.content[:500]}")
+                                except Exception as e:
+                                    logging.error(f"Unexpected error processing PMID {pubmed_id_pubtator}: {str(e)}")
+                            
+                            entry_meta = {
+                                "title": title_pubtator,
+                                "abstract": abstract_pubtator,
+                                "annotations": annotations_pubtator,
+                                "authors": authors_pubtator
+                            }
+                            pubtator_meta[pubmed_id_pubtator] = entry_meta
+                            
+                    except ET.ParseError as e:
+                        logging.error(f"Failed to parse XML: {str(e)}")
+                        continue
                     successful_request = True
                 else:
                     logging.info("Request failed: " + pubtator_url)
 
-        ## eutils part: retrieve sortpubdate, epubdate, authors, journal
+        ## meta part: retrieve epubdate, authors and journal
         meta_url = (
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
             "?db=pubmed&id=" + pubmed_ids_join + "&retmode=json&tool=my_tool"
             "&email=my_email@example.com"
         )
+
         successful_request = False
         count_requests = 0
         while successful_request != True:
@@ -734,8 +762,7 @@ def get_meta_data(
         "sortpubdate": sortpubdate_list,
         "epubdate": epubdate_list,
         "authors": authors_list,
-        "journal": journal_list,
-        "pmc_id": pmc_id_list,
+        "journal": journal_list
     }
 
     if len(df_content["title"]) == len(pubmed_ids_all_batches):
@@ -799,186 +826,181 @@ def update_csv_content_by_json_response(
     article_annotations: pd.DataFrame,
     run_pubtator=True,
 ) -> Tuple[str, int]:
-    if json_response != None:
-        convert_json = None
-        try:
-            convert_json = json_response.json()
-        except:
-            logging.info(
-                "error occured: json response could not be decoded -> skip this entry"
-            )
+    """Update CSV content with new citations."""
+    if json_response is None:
+        return csv_content, reference_id
 
-        if convert_json != None:
-            if "linksets" in json_response.json():
-                if len(json_response.json()["linksets"]) > 0:
-                    if "linksetdbs" in (json_response.json()["linksets"][0]).keys():
-                        length_keys = len(
-                            (json_response.json()["linksets"][0])["linksetdbs"][0][
-                                "links"
-                            ]
-                        )
-                        ## test_mode: only take the first three references / citations
-                        if test_mode:
-                            max_index = min(length_keys, 3)
-                        else:
-                            max_index = length_keys
+    try:
+        meta_json = json_response.json()
+        
+        # Check if response has expected structure
+        if not isinstance(meta_json, dict):
+            logging.error("Invalid JSON response format")
+            return csv_content, reference_id
+            
+        # Check if response has linksets
+        if "linksets" not in meta_json or not meta_json["linksets"]:
+            logging.warning("No linksets found in response")
+            return csv_content, reference_id
+            
+        # Check if linksets has linksetdbs
+        linkset = meta_json["linksets"][0]
+        if "linksetdbs" not in linkset or not linkset["linksetdbs"]:
+            logging.warning("No linksetdbs found in linkset")
+            return csv_content, reference_id
+            
+        # Get the links
+        links = linkset["linksetdbs"][0].get("links", [])
+        if not links:
+            logging.warning("No links found in linksetdb")
+            return csv_content, reference_id
+            
+        # Process links
+        max_index = min(len(links), 3) if test_mode else len(links)
+        other_article_list = links[:max_index]
 
-                        current_index = 0
-                        ## for every article, update the csv_content
-                        other_article_list = (json_response.json()["linksets"][0])[
-                            "linksetdbs"
-                        ][0]["links"][0:max_index]
-                        other_meta_df = get_meta_data(
-                            other_article_list,
-                            bioconcepts=bioconcepts,
-                            run_pubtator=run_pubtator,
-                        )
-                        if not other_meta_df.empty:
-                            for other_article in other_article_list:
-                                # start_time = time.time()
-                                other_meta = other_meta_df.loc[other_article]
-                                # end_time = time.time()
-                                # logging.info("get_meta_data took "+ str(end_time-start_time))
-                                other_title = other_meta["title"].replace("|", ";")
-                                other_epubdate = other_meta["epubdate"].replace(
-                                    "|", ";"
-                                )
-                                other_abstract = other_meta["abstract"].replace(
-                                    "|", ";"
-                                )
-                                other_authors = get_author_string(other_meta["authors"])
-                                other_journal = other_meta["journal"].replace("|", ";")
-                                other_annotations = other_meta["annotations"]
-                                other_pmc_id = other_meta["pmc_id"]
-                                candidate = " ".join([other_title, other_abstract])
-                                if is_relevant(candidate, filter_terms):
-                                    other_keywords = get_relevant_keywords(
-                                        candidate, additional_keywords
-                                    )
-                                    ## distinguish the order in the csv which determines
-                                    # the relationship direction (is cited by or is
-                                    # referencing)
-                                    if is_article_first:
-                                        ## article_id cites other_article
-                                        # logging.info("article_id = "+str(article_id) + " CITES other article = " \
-                                        # + str(other_article) + " | current index = " + str(current_index) \
-                                        # + " ; max = "+str(max_index-1))
-                                        csv_candidate = (
-                                            "|".join(
-                                                [
-                                                    str(reference_id),
-                                                    article_id,
-                                                    article_title,
-                                                    article_pmc_id,
-                                                    article_epubdate,
-                                                    article_authors,
-                                                    article_journal,
-                                                    article_abstract,
-                                                    ",".join(article_keywords),
-                                                    article_annotations,
-                                                    str(other_article),
-                                                    other_title,
-                                                    other_pmc_id,
-                                                    other_epubdate,
-                                                    other_authors,
-                                                    other_journal,
-                                                    other_abstract,
-                                                    ",".join(other_keywords),
-                                                    other_annotations,
-                                                ]
-                                            )
-                                            + "\n"
-                                        )
-                                    else:
-                                        ## article_id is cited by other_article
-                                        # logging.info("article_id = "+str(article_id) + " IS CITED BY other article = " \
-                                        # + str(other_article) + " | current index = " + str(current_index) \
-                                        # + " ; max = "+str(max_index-1))
-                                        csv_candidate = (
-                                            "|".join(
-                                                [
-                                                    str(reference_id),
-                                                    str(other_article),
-                                                    other_title,
-                                                    other_pmc_id,
-                                                    other_epubdate,
-                                                    other_authors,
-                                                    other_journal,
-                                                    other_abstract,
-                                                    ",".join(other_keywords),
-                                                    other_annotations,
-                                                    article_id,
-                                                    article_title,
-                                                    article_pmc_id,
-                                                    article_epubdate,
-                                                    article_authors,
-                                                    article_journal,
-                                                    article_abstract,
-                                                    ",".join(article_keywords),
-                                                    article_annotations,
-                                                ]
-                                            )
-                                            + "\n"
-                                        )
-                                    csv_column_count = len(csv_candidate.split("|"))
-                                    if csv_header_column_count == csv_column_count:
-                                        csv_content += csv_candidate
-                                        reference_id += 1
-                                    else:
-                                        # logging.info("Error: csv row has wrong number of \
-                                        # columns: "+str(csv_column_count)+" expected: "\
-                                        # +str(csv_header_column_count))
-                                        raise Exception(
-                                            "Error: csv row has wrong number "
-                                            "of columns: "
-                                            + str(csv_column_count)
-                                            + " expected: "
-                                            + str(csv_header_column_count)
-                                            + "\n"
-                                            + csv_candidate
-                                        )
-                                current_index += 1
-                        if is_article_first:
-                            logging.info(
-                                "article_id = "
-                                + str(article_id)
-                                + " CITES "
-                                + str(len(other_article_list))
-                                + " other articles"
-                            )
-                        else:
-                            logging.info(
-                                "article_id = "
-                                + str(article_id)
-                                + " is CITED by "
-                                + str(len(other_article_list))
-                                + " other articles"
-                            )
-                            # end_time = time.time()
-                            # logging.info("the whole other_article took " \
-                            # + str(end_time-start_time))
-        ## finally return the csv_content and the reference_id (index of the publication)
+        # Get PubTator metadata for all articles in this batch
+        other_meta_df = get_meta_data(
+            other_article_list,
+            bioconcepts=bioconcepts,
+            run_pubtator=run_pubtator
+        )
+        
+        if other_meta_df.empty:
+            logging.warning("No metadata found for articles")
+            return csv_content, reference_id
+
+        # Process each reference
+        for other_article in other_article_list:
+            try:
+                other_meta = other_meta_df.loc[other_article]
+                if not isinstance(other_meta, pd.Series):
+                    logging.warning(f"Invalid metadata format for article {other_article}")
+                    continue
+                
+                # Get metadata with proper escaping
+                other_title = str(other_meta.get("title", "")).replace("|", ";")
+                other_epubdate = str(other_meta.get("epubdate", "")).replace("|", ";")
+                other_abstract = str(other_meta.get("abstract", "")).replace("|", ";")
+                other_authors = str(other_meta.get("authors", "")).replace("|", ";")
+                other_journal = str(other_meta.get("journal", "")).replace("|", ";")
+                
+                # Skip if no title or abstract
+                if not other_title or not other_abstract:
+                    logging.warning(f"Missing title or abstract for article {other_article}")
+                    continue
+                
+                # Check if article matches filter terms
+                candidate = " ".join([other_title, other_abstract])
+                if not is_relevant(candidate, filter_terms):
+                    logging.debug(f"Article {other_article} did not match filter terms")
+                    continue
+                    
+                # Get keywords
+                other_keywords = get_relevant_keywords(candidate, additional_keywords)
+                
+                # Get annotations (default to empty dict if not found)
+                other_annotations = {}
+                if isinstance(other_meta.get("annotations"), dict):
+                    other_annotations = other_meta["annotations"]
+                
+                # Create CSV line
+                csv_candidate = ""
+                
+                if is_article_first:
+                    # Article metadata
+                    csv_candidate = (
+                        f"{reference_id}|{article_id}|{article_title}|{article_epubdate}|"
+                        f"{article_authors}|{article_journal}|{article_abstract}|"
+                        f"{','.join(article_keywords) if article_keywords else ''}"
+                    )
+                    
+                    # Article entity annotations
+                    for entity_type in ['disease', 'gene', 'chemical', 'species', 'mutation']:
+                        csv_candidate += f"|{article_annotations.get(entity_type, 'Null')}"
+                    
+                    # Referenced article metadata
+                    csv_candidate += (
+                        f"|{reference_id}|{other_article}|{other_title}|{other_epubdate}|"
+                        f"{other_authors}|{other_journal}|{other_abstract}|"
+                        f"{','.join(other_keywords) if other_keywords else ''}"
+                    )
+                    
+                    # Referenced article entity annotations
+                    for entity_type in ['disease', 'gene', 'chemical', 'species', 'mutation']:
+                        csv_candidate += f"|{other_annotations.get(entity_type, 'Null')}"
+                    
+                    # Add GO and pathway annotations
+                    csv_candidate += "|Null|Null|Null|Null|Null|Null"
+                else:
+                    # Referenced article metadata
+                    csv_candidate = (
+                        f"{reference_id}|{other_article}|{other_title}|{other_epubdate}|"
+                        f"{other_authors}|{other_journal}|{other_abstract}|"
+                        f"{','.join(other_keywords) if other_keywords else ''}"
+                    )
+                    
+                    # Referenced article entity annotations
+                    for entity_type in ['disease', 'gene', 'chemical', 'species', 'mutation']:
+                        csv_candidate += f"|{other_annotations.get(entity_type, 'Null')}"
+                    
+                    # Article metadata
+                    csv_candidate += (
+                        f"|{reference_id}|{article_id}|{article_title}|{article_epubdate}|"
+                        f"{article_authors}|{article_journal}|{article_abstract}|"
+                        f"{','.join(article_keywords) if article_keywords else ''}"
+                    )
+                    
+                    # Article entity annotations
+                    for entity_type in ['disease', 'gene', 'chemical', 'species', 'mutation']:
+                        csv_candidate += f"|{article_annotations.get(entity_type, 'Null')}"
+                    
+                    # Add GO and pathway annotations
+                    csv_candidate += "|Null|Null|Null|Null|Null|Null"
+                
+                csv_candidate += "\n"
+                
+                # Verify column count
+                column_count = len(csv_candidate.strip().split("|"))
+                if column_count != csv_header_column_count:
+                    raise Exception(
+                        f"Error: csv row has wrong number of columns: {column_count} "
+                        f"expected: {csv_header_column_count}\n{csv_candidate}"
+                    )
+                
+                csv_content += csv_candidate
+                reference_id += 1
+
+            except Exception as e:
+                logging.error(f"Error processing article {other_article}: {str(e)}")
+                continue
+
+    except Exception as e:
+        logging.error(f"Error processing JSON response: {str(e)}")
+        raise e
+
     return csv_content, reference_id
 
 
 def get_author_string(author_list: List[str]) -> str:
+    if not author_list:
+        return "'NA'"
+    
+    if isinstance(author_list, str):
+        # If it's already a string, just clean and return it
+        return "'" + author_list.replace("'", "\\'") + "'"
+    
     author_list_temp = []
-    if len(author_list) > 0:
-        if isinstance(author_list, list):
-            for author_dict in author_list:
-                if isinstance(author_dict, dict):
-                    if "name" in author_dict.keys():
-                        author = author_dict["name"]
-                    else:
-                        author = "NA"
-                else:
-                    author = "NA"
-                author_list_temp.append(author)
-            authors = "'" + ";".join(author_list_temp).replace("'", "\\'") + "'"
-        else:
-            authors = "NA"
+    if isinstance(author_list, list):
+        for author in author_list:
+            if isinstance(author, dict):
+                author_name = author.get("name", "NA")
+            else:
+                author_name = str(author)
+            author_list_temp.append(author_name)
+        authors = "'" + ";".join(author_list_temp).replace("'", "\\'") + "'"
     else:
-        authors = "NA"
+        authors = "'NA'"
     return authors
 
 
@@ -994,53 +1016,34 @@ def create_citation_csv(
     bioconcepts: str,
     run_pubtator: bool = True,
 ) -> int:
-    article_annotations = "|".join(["article_" + a for a in bioconcepts.split(",")])
-    reference_annotations = "|".join(["reference_" + a for a in bioconcepts.split(",")])
-    csv_header = "|".join(
-        [
-            "reference_id",
-            "article",
-            "article_title",
-            "article_pmc_id",
-            "article_epubdate",
-            "article_authors",
-            "article_journal",
-            "article_abstract",
-            "article_keywords",
-            article_annotations,
-            "reference",
-            "reference_title",
-            "reference_pmc_id",
-            "reference_epubdate",
-            "reference_authors",
-            "reference_journal",
-            "reference_abstract",
-            "reference_keywords",
-            reference_annotations,
-        ]
-    )
-    csv_content = ""
-    csv_text = csv_header
-    csv_header_column_count = len(csv_header.split("|"))
     reference_id = reference_id_start
-    article_id = str(doi)
-
+    csv_content = ""
+    csv_header = ("reference_id|article_id|article_title|article_epubdate|"
+                 "article_authors|article_journal|article_abstract|article_keywords|"
+                 "article_disease|article_gene|article_chemical|article_species|article_mutation|"
+                 "other_reference_id|other_article_id|other_title|other_epubdate|"
+                 "other_authors|other_journal|other_abstract|other_keywords|"
+                 "other_disease|other_gene|other_chemical|other_species|other_mutation|"
+                 "article_GO_BP|article_GO_CC|article_GO_MF|article_pathway_kegg|"
+                 "article_pathway_reactome|article_pathway_wikipathways")
+    csv_header_column_count = len(csv_header.split("|"))
+    csv_content = csv_header + "\n"
+    ## first article
+    article_id = article_meta.index[0]
     article_title = article_meta.loc[article_id, "title"].replace("|", ";")
-    article_pmc_id = article_meta.loc[article_id, "pmc_id"].replace("|", ";")
     article_epubdate = article_meta.loc[article_id, "epubdate"].replace("|", ";")
-    article_authors = get_author_string(article_meta.loc[article_id, "authors"])
+    article_authors = article_meta.loc[article_id, "authors"].replace("|", ";")
     article_journal = article_meta.loc[article_id, "journal"].replace("|", ";")
     article_abstract = article_meta.loc[article_id, "abstract"].replace("|", ";")
-    article_search_for_terms = " ".join([article_title, article_abstract])
+    article_annotations = article_meta.loc[article_id, "annotations"]
 
     ## only add lines, if at least the DOI is relevant with respect to
     # the search-terms
+    article_search_for_terms = " ".join([article_title, article_abstract])
     if is_relevant(article_search_for_terms, filter_terms):
         article_keywords = get_relevant_keywords(
             article_search_for_terms, additional_keywords
         )
-        article_annotations = article_meta.loc[article_id, "annotations"]
-
         csv_content_old = csv_content
 
         # citations (article is cited by the list of publications)
@@ -1064,7 +1067,7 @@ def create_citation_csv(
             bioconcepts,
             article_id,
             article_title,
-            article_pmc_id,
+            "",
             article_epubdate,
             article_authors,
             article_journal,
@@ -1096,7 +1099,7 @@ def create_citation_csv(
             bioconcepts,
             article_id,
             article_title,
-            article_pmc_id,
+            "",
             article_epubdate,
             article_authors,
             article_journal,
@@ -1118,7 +1121,6 @@ def create_citation_csv(
                         str(reference_id),
                         article_id,
                         article_title,
-                        article_pmc_id,
                         article_epubdate,
                         article_authors,
                         article_journal,
@@ -1131,6 +1133,12 @@ def create_citation_csv(
                         other_abstract,
                         ",".join(other_keywords),
                         other_annotations,
+                        "Null",
+                        "Null",
+                        "Null",
+                        "Null",
+                        "Null",
+                        "Null",
                     ]
                 )
                 + "\n"
@@ -1138,7 +1146,7 @@ def create_citation_csv(
             csv_content += csv_candidate
             reference_id += 1
 
-    csv_text = csv_header + "\n" + csv_content
+    csv_text = csv_content
     csv_text = csv_text.replace('"', "")
 
     ## write to file, that can be accessed from neo4j (neo4j is

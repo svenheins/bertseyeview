@@ -1,8 +1,7 @@
 ## custom gitignore
 notebooks/
 output/als/pubtator_response.xml
-data/
-
+data/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
