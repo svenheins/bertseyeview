@@ -332,7 +332,8 @@ def get_meta_data(
         if run_pubtator == True:
             pubtator_url = (
                 "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
-                "publications/export/biocxml?pmids=" + pubmed_ids_join + "&full=true"
+                "publications/export/pubtator?pmids=" + pubmed_ids_join + "&concepts"
+                "=" + bioconcepts
             )
             successful_request = False
             count_requests = 0
@@ -465,30 +466,294 @@ def get_meta_data(
             "?db=pubmed&id=" + pubmed_ids_join + "&retmode=json&tool=my_tool"
             "&email=my_email@example.com"
         )
-        meta_response = request_with_delay(meta_url)
-        if meta_response != None:
-            meta_json = meta_response.json()
-            for pubmed_id in pubmed_ids:
-                pubmed_id = str(pubmed_id)
-                if pubmed_id in pubtator_meta:
-                    title_list.append(pubtator_meta[pubmed_id]["title"])
-                    abstract_list.append(pubtator_meta[pubmed_id]["abstract"])
-                    annotations_list.append(pubtator_meta[pubmed_id]["annotations"])
-                    authors_list.append(pubtator_meta[pubmed_id]["authors"])
-                else:
-                    title_list.append("")
-                    abstract_list.append("")
-                    annotations_list.append("")
-                    authors_list.append("")
 
-                if pubmed_id in meta_json["result"]:
-                    sortpubdate_list.append(meta_json["result"][pubmed_id]["sortpubdate"])
-                    epubdate_list.append(meta_json["result"][pubmed_id]["epubdate"])
-                    journal_list.append(meta_json["result"][pubmed_id]["source"])
-                else:
-                    sortpubdate_list.append("")
-                    epubdate_list.append("")
-                    journal_list.append("")
+        successful_request = False
+        count_requests = 0
+        while successful_request != True:
+            r_meta = request_with_delay(meta_url)
+            count_requests += 1
+            if count_requests > 1:
+                logging.info("count_requests = " + str(count_requests))
+            if r_meta != None:
+                if "result" in r_meta.json():
+                    for pubmed_id in pubmed_ids:
+                        if pubmed_id in r_meta.json()["result"]:
+                            if pubmed_id in pubtator_meta:
+                                title_list.append(pubtator_meta[pubmed_id]["title"])
+                                abstract_list.append(
+                                    pubtator_meta[pubmed_id]["abstract"]
+                                )
+                                annotations_list.append(
+                                    pubtator_meta[pubmed_id]["annotations"]
+                                )
+                                # sortpubdate.append(pubtator_meta[pubmed_id]['sortpubdate'])
+                                # epubdate.append(pubtator_meta[pubmed_id]['epubdate'])
+                                # authors.append(pubtator_meta[pubmed_id]['authors'])
+                                # journal.append(pubtator_meta[pubmed_id]['journal'])
+                                # pmc_id.append(pubtator_meta[pubmed_id]['pmc_id'])
+                            else:
+                                title_from_eutil = get_field_or_default_value(
+                                    r_meta.json()["result"][pubmed_id],
+                                    "title",
+                                    default="NA",
+                                )
+                                title_list.append(title_from_eutil)
+                                abstract_list.append("NA")
+                                bioconcepts_list = bioconcepts.split(",")
+                                annotations_all = ""
+                                for bioconcept in bioconcepts_list:
+                                    if len(annotations_all) > 0:
+                                        annotations_all = "|".join(
+                                            [annotations_all, "Null"]
+                                        )
+                                    else:
+                                        annotations_all = "Null"
+
+                                annotations_list.append(annotations_all)
+
+                            sortpubdate_raw = get_field_or_default_value(
+                                r_meta.json()["result"][pubmed_id],
+                                "sortpubdate",
+                                default="NA",
+                            )
+                            ## transform to iso format
+                            sortpubdate_processed = sortpubdate_raw.split(" ")[
+                                0
+                            ].replace("/", "-")
+                            sortpubdate_list.append(sortpubdate_processed)
+                            epubdate_raw = get_field_or_default_value(
+                                r_meta.json()["result"][pubmed_id],
+                                "epubdate",
+                                default="NA",
+                            )
+                            ## epubdate and sortpubdate are well defined /
+                            # structured iso formats, but the pubdate is
+                            # quite arbitrary, this is why the pubdate_raw is
+                            # preprocessed and parsed quite attentive finally:
+                            # if all fails, we fall back to the sortpubdate
+                            if epubdate_raw == "NA" or epubdate_raw == "":
+                                pubdate_raw = get_field_or_default_value(
+                                    r_meta.json()["result"][pubmed_id],
+                                    "pubdate",
+                                    default="NA",
+                                )
+                                pubdate_processed = preprocess_date(pubdate_raw)
+                                try:
+                                    pubdate = datetime.strptime(
+                                        pubdate_processed, "%Y %b %d"
+                                    ).strftime("%Y-%m-%d")
+                                except ValueError as e:
+                                    logging.info(pubdate_raw)
+                                    logging.info(pubdate_processed)
+                                    logging.info(e)
+                                    logging.info(
+                                        "take the sortpubdate_processed "
+                                        "version: " + sortpubdate_processed
+                                    )
+                                    epubdate_raw = datetime.strptime(
+                                        sortpubdate_processed, "%Y-%m-%d"
+                                    ).strftime("%Y %b %d")
+                                    logging.info(
+                                        "resulting epubdate_raw: " + epubdate_raw
+                                    )
+                            epubdate_iso = (
+                                pubdate
+                                if (epubdate_raw == "NA" or epubdate_raw == "")
+                                else datetime.strptime(
+                                    epubdate_raw, "%Y %b %d"
+                                ).strftime("%Y-%m-%d")
+                            )
+                            epubdate_list.append(epubdate_iso)
+                            authors = get_field_or_default_value(
+                                r_meta.json()["result"][pubmed_id],
+                                "authors",
+                                default="NA",
+                            )
+                            authors_list.append(authors)
+
+                            journal_list.append(
+                                get_field_or_default_value(
+                                    r_meta.json()["result"][pubmed_id],
+                                    "fulljournalname",
+                                    default="NA",
+                                )
+                            )
+                            pmc_id = "NA"
+                            if "articleids" in r_meta.json()["result"][pubmed_id]:
+                                for article_id in r_meta.json()["result"][pubmed_id][
+                                    "articleids"
+                                ]:
+                                    if article_id["idtype"] == "pmc":
+                                        pmc_id = article_id["value"]
+
+                                        if run_pubtator == True:
+                                            pubtator_url_pmc = (
+                                                "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/publications/export/biocxml?pmids="
+                                                + str(pubmed_id) + "&full=true"
+                                            )
+                                            successful_request = False
+                                            count_requests = 0
+                                            while successful_request != True:
+                                                pubtator_response = request_with_delay(
+                                                    pubtator_url_pmc
+                                                )
+                                                count_requests += 1
+                                                if count_requests > 1:
+                                                    logging.info(
+                                                        "count_requests = "
+                                                        + str(count_requests)
+                                                    )
+                                                if pubtator_response != None:
+                                                    successful_request = True
+                                                    ## write biocxml to temp file
+                                                    with open(
+                                                        "/output/pubtator_response.xml",
+                                                        "w",
+                                                    ) as f:
+                                                        f.write(pubtator_response.text)
+                                                    ner_dict = {}
+                                                    ## load biocxml file and put to collection
+                                                    with open(
+                                                        "/output/pubtator_response.xml",
+                                                        "r",
+                                                    ) as fp:
+                                                        collection = None
+                                                        try:
+                                                            collection = bioc.load(fp)
+                                                        except:
+                                                            logging.info(
+                                                                f"Error: collection for {pmc_id}: pubtator_url = {pubtator_url_pmc}"
+                                                            )
+                                                        if collection != None:
+                                                            # logging.info(f"Success: collection for {pmc_id}: pubtator_url = {pubtator_url_pmc}")
+                                                            if (
+                                                                len(
+                                                                    collection.documents
+                                                                )
+                                                                > 0
+                                                            ):
+                                                                for (
+                                                                    document
+                                                                ) in (
+                                                                    collection.documents
+                                                                ):
+                                                                    ## document.id is the pmc id
+                                                                    if (
+                                                                        len(
+                                                                            document.passages
+                                                                        )
+                                                                        > 0
+                                                                    ):
+                                                                        for (
+                                                                            passage
+                                                                        ) in (
+                                                                            document.passages
+                                                                        ):
+                                                                            if (
+                                                                                len(
+                                                                                    passage.annotations
+                                                                                )
+                                                                                > 0
+                                                                            ):
+                                                                                ## loop through all annotation
+                                                                                for annotation in (
+                                                                                    passage.annotations
+                                                                                ):
+                                                                                    ner_type = "Null"
+                                                                                    ner_identifier = "Null"
+                                                                                    if (
+                                                                                        "type"
+                                                                                        in annotation.infons
+                                                                                    ):
+                                                                                        ner_type = annotation.infons[
+                                                                                            "type"
+                                                                                        ]
+                                                                                    if (
+                                                                                        "identifier"
+                                                                                        in annotation.infons
+                                                                                    ):
+                                                                                        ner_identifier = annotation.infons[
+                                                                                            "identifier"
+                                                                                        ]
+                                                                                    ## ner-text for each entity
+                                                                                    try:
+                                                                                        ner_text = (
+                                                                                            str(ner_type)
+                                                                                            + ":"
+                                                                                            + str(ner_identifier)
+                                                                                            + ";"
+                                                                                            + str(annotation.text)
+                                                                                        )
+                                                                                    except:
+                                                                                        logging.info("error with ner_text")
+                                                                                        
+                                                                                    if (
+                                                                                        ner_type.lower()
+                                                                                        in ner_dict
+                                                                                    ):
+                                                                                        if ner_identifier:
+                                                                                            if (
+                                                                                                ner_identifier
+                                                                                                != "Null"
+                                                                                            ) and not (
+                                                                                                ner_identifier
+                                                                                                in ner_dict[
+                                                                                                    ner_type.lower()
+                                                                                                ]
+                                                                                            ):
+                                                                                                ner_dict[
+                                                                                                    ner_type.lower()
+                                                                                                ] += (
+                                                                                                    ","
+                                                                                                    + ner_text
+                                                                                                )
+                                                                                    else:
+                                                                                        ner_dict[
+                                                                                            ner_type.lower()
+                                                                                        ] = ner_text
+                                                                    ner_string = ""
+                                                                    ## for each concept, build the respective entity string
+                                                                    for (
+                                                                        index,
+                                                                        bioconcept,
+                                                                    ) in enumerate(
+                                                                        bioconcepts_list
+                                                                    ):
+                                                                        if (
+                                                                            bioconcept
+                                                                            in ner_dict
+                                                                        ):
+                                                                            ner_string += ner_dict[
+                                                                                bioconcept
+                                                                            ]
+                                                                        else:
+                                                                            ner_string += (
+                                                                                "Null"
+                                                                            )
+                                                                        ## add separator between entity types (and not at the end)
+                                                                        if (
+                                                                            index
+                                                                            < len(
+                                                                                bioconcepts_list
+                                                                            )
+                                                                            - 1
+                                                                        ):
+                                                                            ner_string += (
+                                                                                "|"
+                                                                            )
+                                                    ## replace the original pubtator annotation if there is a pmc annotation
+                                                    if len(ner_dict) > 0:
+                                                        annotations_list = (
+                                                            annotations_list[:-1]
+                                                        )
+                                                        annotations_list.append(
+                                                            ner_string
+                                                        )
+
+                            pmc_id_list.append(pmc_id)
+                successful_request = True
+            else:
+                logging.info("Request failed: " + meta_url)
 
     df_content = {
         "title": title_list,

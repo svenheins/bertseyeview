@@ -1,5 +1,6 @@
 ## custom gitignore
 notebooks/
+output/als/pubtator_response.xml
 data/*
 
 # Byte-compiled / optimized / DLL files
@@ -173,3 +174,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
