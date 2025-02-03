@@ -1,6 +1,6 @@
 ## custom gitignore
 notebooks/
-
+output/als/pubtator_response.xml
 data/
 
 
@@ -175,3 +175,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+

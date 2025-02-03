@@ -648,32 +648,37 @@ def get_meta_data(
                                                                                             "identifier"
                                                                                         ]
                                                                                     ## ner-text for each entity
-                                                                                    ner_text = (
-                                                                                        ner_type
-                                                                                        + ":"
-                                                                                        + ner_identifier
-                                                                                        + ";"
-                                                                                        + annotation.text
-                                                                                    )
+                                                                                    try:
+                                                                                        ner_text = (
+                                                                                            str(ner_type)
+                                                                                            + ":"
+                                                                                            + str(ner_identifier)
+                                                                                            + ";"
+                                                                                            + str(annotation.text)
+                                                                                        )
+                                                                                    except:
+                                                                                        logging.info("error with ner_text")
+                                                                                        
                                                                                     if (
                                                                                         ner_type.lower()
                                                                                         in ner_dict
                                                                                     ):
-                                                                                        if (
-                                                                                            ner_identifier
-                                                                                            != "Null"
-                                                                                        ) and not (
-                                                                                            ner_identifier
-                                                                                            in ner_dict[
-                                                                                                ner_type.lower()
-                                                                                            ]
-                                                                                        ):
-                                                                                            ner_dict[
-                                                                                                ner_type.lower()
-                                                                                            ] += (
-                                                                                                ","
-                                                                                                + ner_text
-                                                                                            )
+                                                                                        if ner_identifier:
+                                                                                            if (
+                                                                                                ner_identifier
+                                                                                                != "Null"
+                                                                                            ) and not (
+                                                                                                ner_identifier
+                                                                                                in ner_dict[
+                                                                                                    ner_type.lower()
+                                                                                                ]
+                                                                                            ):
+                                                                                                ner_dict[
+                                                                                                    ner_type.lower()
+                                                                                                ] += (
+                                                                                                    ","
+                                                                                                    + ner_text
+                                                                                                )
                                                                                     else:
                                                                                         ner_dict[
                                                                                             ner_type.lower()

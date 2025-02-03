@@ -5,6 +5,16 @@ import sys
 import os
 import pandas as pd
 from typing import List
+import requests
+import re
+import json
+import logging
+import time
+import bioc
+
+from typing import List, Set, Dict, Tuple
+from xml.etree import ElementTree
+from datetime import datetime, timedelta
 
 # Set up logging
 logging.basicConfig(
@@ -20,6 +30,127 @@ def batch(iterable: list, n: int = 1):
     l = len(iterable)
     for ndx in range(0, l, n):
         yield iterable[ndx : min(ndx + n, l)]
+
+
+def get_field_or_default_value(source_dict: dict, field: str, default):
+    if field in source_dict:
+        return source_dict[field]
+    else:
+        return default
+    
+def contains_season(date_raw: str) -> bool:
+    if ("fall" in date_raw.lower() or "spring" in date_raw.lower() 
+        or "winter" in date_raw.lower() or "summer" in date_raw.lower()):
+        return True
+    else:
+        return False
+    
+def contains_month(date_raw: str) -> bool:
+    if ("jan" in date_raw.lower() or "feb" in date_raw.lower() 
+        or "mar" in date_raw.lower() or "apr" in date_raw.lower() 
+        or "mai" in date_raw.lower() or "jun" in date_raw.lower() 
+        or "jul" in date_raw.lower() or "aug" in date_raw.lower() 
+        or "sep" in date_raw.lower() or "oct" in date_raw.lower() 
+        or "nov" in date_raw.lower() or "dec" in date_raw.lower()):
+        return True
+    else:
+        return False
+        
+def season_to_month(season: str) -> str:
+    if "spring" in season.lower():
+        return "Mar"
+    elif "summer" in season.lower():
+        return "Jun"
+    elif "fall" in season.lower():
+        return "Sep"
+    elif "winter" in season.lower():
+        return "Dec"
+    else:
+        raise Exception("season is not a season: "+ season) 
+        
+def extract_month(date_raw: str) -> str:
+    if "jan" in date_raw.lower():
+        return "Jan"
+    elif "feb" in date_raw.lower():
+        return "Feb"
+    elif "mar" in date_raw.lower():
+        return "Mar"
+    elif "apr" in date_raw.lower():
+        return "Apr"
+    elif "mai" in date_raw.lower():
+        return "Mai"
+    elif "jun" in date_raw.lower():
+        return "Jun"
+    elif "jul" in date_raw.lower():
+        return "Jul"
+    elif "aug" in date_raw.lower():
+        return "Aug"
+    elif "sep" in date_raw.lower():
+        return "Sep"
+    elif "oct" in date_raw.lower():
+        return "Oct"
+    elif "nov" in date_raw.lower():
+        return "Nov"
+    elif "dec" in date_raw.lower():
+        return "Dec"
+    else:
+        raise Exception("date_raw is not a month: "+ date_raw) 
+
+def preprocess_date(pubdate_raw: str) -> str:
+    if (pubdate_raw == "NA" or pubdate_raw == ""):
+        pubdate_raw = '1900 Jan 1'
+    ## season string
+    if contains_season(pubdate_raw):
+        ## get year, season to month and day is always first of month
+        year_raw = re.match(r'.*([1-3][0-9]{3})', pubdate_raw).group(1)
+        month_from_season = season_to_month(pubdate_raw)
+        day_season = "1"
+        pubdate_raw = " ".join([str(year_raw), month_from_season, day_season])
+    if len(pubdate_raw.split(" ")) < 3:
+        ## assumption: day is missing
+        if len(pubdate_raw.split(" ")) == 2:
+            year_raw = re.match(r'.*([1-3][0-9]{3})', pubdate_raw).group(1)
+            day_season = "1"
+            month_from_raw = "Jan"
+            if contains_season(pubdate_raw):
+                month_from_raw = season_to_month(pubdate_raw)
+            if contains_month(pubdate_raw):    
+                month_from_raw = extract_month(pubdate_raw)
+            pubdate_raw = " ".join([str(year_raw), month_from_raw, 
+                                    day_season])
+            ## if this test fails, the format is not year month
+            try:
+                test_date = datetime.strptime(pubdate_raw, '%Y %b %d')
+            except ValueError as e:
+                logging.info(pubdate_raw)
+                logging.info(e)
+        else:
+            year_raw = re.match(r'.*([1-3][0-9]{3})', pubdate_raw).group(1)
+            if len(year_raw) == 4:
+                pubdate_raw = pubdate_raw + " Jan 1"
+            else:
+                pubdate_raw = '1900 Jan 1'
+    ## check for special chars (example: 2021 Jan/Mar 1; 
+    # 2021 Jan-Mar 1 is possible!)
+    contains_no_special_chars = (len(re.split('-|/', pubdate_raw)) == 1)
+    pubdate_raw = pubdate_raw if contains_no_special_chars else re.split(
+        '-|/', pubdate_raw)[0]+re.split('-|/', pubdate_raw)[1][3:]
+    return pubdate_raw
+
+
+## request something followed by a delay (pubmed allows 3 requests per second)
+def request_with_delay(url: str, api_delay: float = 0.0, my_timeout: 
+                       float = 20.0) -> requests.Response:
+    try:
+        response = requests.get(url, timeout=my_timeout)
+    except (requests.exceptions.Timeout, 
+            requests.exceptions.ConnectionError) as err:
+        #raise Exception("Request takes too long")
+        return None#'Server taking too long. Try again later'
+    else:
+        time.sleep(api_delay)
+        return response    
+
 
 ## get meta data from a pubmed_id
 ## meta data = title, epubdate, abstract
@@ -294,14 +425,14 @@ def get_meta_data(
                                                     successful_request = True
                                                     ## write biocxml to temp file
                                                     with open(
-                                                        "/output/pubtator_response.xml",
+                                                        "pubtator_response.xml",
                                                         "w",
                                                     ) as f:
                                                         f.write(pubtator_response.text)
                                                     ner_dict = {}
                                                     ## load biocxml file and put to collection
                                                     with open(
-                                                        "/output/pubtator_response.xml",
+                                                        "pubtator_response.xml",
                                                         "r",
                                                     ) as fp:
                                                         collection = None
@@ -363,32 +494,37 @@ def get_meta_data(
                                                                                             "identifier"
                                                                                         ]
                                                                                     ## ner-text for each entity
-                                                                                    ner_text = (
-                                                                                        ner_type
-                                                                                        + ":"
-                                                                                        + ner_identifier
-                                                                                        + ";"
-                                                                                        + annotation.text
-                                                                                    )
+                                                                                    try:
+                                                                                        ner_text = (
+                                                                                            str(ner_type)
+                                                                                            + ":"
+                                                                                            + str(ner_identifier)
+                                                                                            + ";"
+                                                                                            + str(annotation.text)
+                                                                                        )
+                                                                                    except:
+                                                                                        logging.info("error with ner_text")
+                                                                                        
                                                                                     if (
                                                                                         ner_type.lower()
                                                                                         in ner_dict
                                                                                     ):
-                                                                                        if (
-                                                                                            ner_identifier
-                                                                                            != "Null"
-                                                                                        ) and not (
-                                                                                            ner_identifier
-                                                                                            in ner_dict[
-                                                                                                ner_type.lower()
-                                                                                            ]
-                                                                                        ):
-                                                                                            ner_dict[
-                                                                                                ner_type.lower()
-                                                                                            ] += (
-                                                                                                ","
-                                                                                                + ner_text
-                                                                                            )
+                                                                                        if ner_identifier:
+                                                                                            if (
+                                                                                                ner_identifier
+                                                                                                != "Null"
+                                                                                            ) and not (
+                                                                                                ner_identifier
+                                                                                                in ner_dict[
+                                                                                                    ner_type.lower()
+                                                                                                ]
+                                                                                            ):
+                                                                                                ner_dict[
+                                                                                                    ner_type.lower()
+                                                                                                ] += (
+                                                                                                    ","
+                                                                                                    + ner_text
+                                                                                                )
                                                                                     else:
                                                                                         ner_dict[
                                                                                             ner_type.lower()
@@ -464,9 +600,8 @@ def get_meta_data(
 def test_get_meta_data():
     # Test PMIDs
     test_pmids = [
-        "36116464",
-        "28980624",
-        "28700839"
+        "37890889",
+        
     ]
     
     logging.info("Starting metadata retrieval test with PMIDs: %s", test_pmids)
@@ -474,7 +609,7 @@ def test_get_meta_data():
     try:
         # Call get_meta_data with debug settings
         result_df = get_meta_data(
-            pubmed_ids_all_batches=batch(test_pmids, 1),
+            pubmed_ids_all_batches=test_pmids,
             bioconcepts="gene,disease,chemical,species,mutation,cellline",
             batch_size=1,  # Process one at a time for easier debugging
             run_pubtator=True
