@@ -78,25 +78,28 @@ def is_convertible_to_float(value: str) -> bool:
     return False
 
 def neo4j_create_entities_command(bioconcepts: str) -> str:
-    ret_string = ""
-    for entity_class in bioconcepts.split(","):
-        # Convert entity class to lowercase to match CSV column names
-        entity_class_lower = entity_class.lower()
-        
-        # Create nodes and relationships for article entities
-        ret_string += (
-            f"FOREACH (annotation in CASE WHEN line.article_{entity_class_lower} <> 'Null' "
-            f"THEN split(line.article_{entity_class_lower}, ',') ELSE [] END | "
-            f"MERGE (a:{entity_class} {{ name: split(annotation, ';')[0] }}) "
-            f"ON CREATE SET a.label = split(annotation, ';')[1] "
-            f"MERGE (p1)-[:has_named_entity]->(a)) "
-            f"FOREACH (annotation in CASE WHEN line.other_{entity_class_lower} <> 'Null' "
-            f"THEN split(line.other_{entity_class_lower}, ',') ELSE [] END | "
-            f"MERGE (a:{entity_class} {{ name: split(annotation, ';')[0] }}) "
-            f"ON CREATE SET a.label = split(annotation, ';')[1] "
-            f"MERGE (p2)-[:has_named_entity]->(a)) "
-        )
-    return ret_string
+        ret_string = ""
+        anno_index = 0
+        for entity_class in bioconcepts.split(","):
+            str_anno_index = str(anno_index)
+            str_anno_index_plus_one = str(anno_index+1)
+            ret_string += "FOREACH (annotation" + str_anno_index + \
+                " in split(line.article_"+entity_class+ \
+                ", ',') | MERGE(a"+str_anno_index+":" + entity_class + \
+                " { name:split(annotation"+str_anno_index+",\";\")[0] })"\
+                " ON CREATE SET a"+str_anno_index+".label=split(annotation"\
+                + str_anno_index+",\";\")[1] MERGE (p1)-[:has_named_entity]"\
+                "->(a" + str_anno_index + ") ) \n" + \
+                "FOREACH (annotation"+str_anno_index_plus_one+" in split(line."\
+                "reference_" + entity_class + ", ',') | MERGE(a" \
+                + str_anno_index_plus_one + ":" + entity_class + \
+                " { name:split(annotation" + str_anno_index_plus_one \
+                + ",\";\")[0] }) ON CREATE SET a" + str_anno_index_plus_one \
+                + ".label=split(annotation" + str_anno_index_plus_one \
+                + ",\";\")[1] MERGE (p2)-[:has_named_entity]->(a" \
+                + str_anno_index_plus_one + ") ) \n"
+            anno_index += 2
+        return ret_string
 
 def get_color_for_label(label: str = ""):
     color = "grey"
@@ -230,7 +233,6 @@ class Neo4j_Manager:
         if (response):
             if len(response) > 0:
                 response_list = [dict(_) for _ in response]
-
         return response_list#jsonify(results = response_list)
 
     def get_predefined_label_abundance(self, query: str = None) -> str:
@@ -371,7 +373,8 @@ class Neo4j_Manager:
                     and goal_entity_value != None):
 
                 if (len(goal_entity_attribute) > 0 
-                    and len(goal_entity_operator) > 0):
+                    and len(goal_entity_operator) > 0
+                    ):
                     if not goal_entity_operator.lower() in \
                         ["=", "<", ">", ">=",
                         ">=", "<=", "<>", "is null", 
@@ -526,7 +529,7 @@ class Neo4j_Manager:
             {create_subset_2}
 
             // determine expected mentions for the goal entity
-            MATCH (entity:{goal_entity_label}){goal_jump_entity}<--(a:Article) 
+            MATCH (entity:{goal_entity_label}){goal_jump_entity}<--(a:Article)
             WHERE 1=1 {goal_entity_where_clause} {a_article_where}
             WITH count_articles, count_subset_articles_1, subset_list_1, {subset_2_with_clause}
                 entity,
@@ -1386,7 +1389,6 @@ class Neo4j_Manager:
                 self.logging.info("index = "+str(index_sinfo))
             species_id = self.search_id_in_label("species", "name", "=", "Species:" \
                                               + str(ncbi_species_id))[0]
-            
             organism_id = str(ncbi_species_id)
             URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=" + organism_id + "&lvl=0"
             #self.logging.info("URL = " + URL)
@@ -1491,6 +1493,7 @@ class Neo4j_Manager:
                     self.set_tag_node_attribute(
                         disease_db_id, simple_field, 
                         add_quotes(disease_fields[simple_field]))
+
 
     def add_chemical_information(self):
         chemical_list = self.where_exists_field("chemical", "mesh_name", "name", 
@@ -2179,54 +2182,52 @@ class Neo4j_Manager:
     def _create_citation_graph(tx, bioconcepts: str) -> None:
         str_adding_annotations = neo4j_create_entities_command(bioconcepts)
         date_now = str(datetime.now().strftime('%Y-%m-%d'))
-        query = (
-            "LOAD CSV WITH HEADERS FROM 'file:///data/citations.csv' AS line "
-            "FIELDTERMINATOR '|' "
-            "WITH line WHERE line.article_id IS NOT NULL "
-            "MERGE (p1:Article { name: line.article_id }) "
-            "ON CREATE SET p1.a_name = line.article_id, "
-            "p1.label = line.article_id, "
-            "p1.b_title = line.article_title, "
-            "p1.epubdate = line.article_epubdate, "
-            "p1.authors = line.article_authors, "
-            "p1.journal = line.article_journal, "
-            "p1.z_abstract = line.article_abstract, "
-            "p1.date_integration = '" + date_now + "' "
-            "ON MATCH SET p1.a_name = line.article_id, "
-            "p1.label = line.article_id, "
-            "p1.b_title = line.article_title, "
-            "p1.epubdate = line.article_epubdate, "
-            "p1.authors = line.article_authors, "
-            "p1.journal = line.article_journal, "
-            "p1.z_abstract = line.article_abstract, "
-            "p1.date_integration = '" + date_now + "' "
-            "WITH line, p1 WHERE line.other_article_id IS NOT NULL "
-            "MERGE (p2:Article { name: line.other_article_id }) "
-            "ON CREATE SET p2.a_name = line.other_article_id, "
-            "p2.label = line.other_article_id, "
-            "p2.b_title = COALESCE(line.other_title, ''), "
-            "p2.epubdate = COALESCE(line.other_epubdate, ''), "
-            "p2.authors = COALESCE(line.other_authors, ''), "
-            "p2.journal = COALESCE(line.other_journal, ''), "
-            "p2.z_abstract = COALESCE(line.other_abstract, ''), "
-            "p2.date_integration = '" + date_now + "' "
-            "ON MATCH SET p2.a_name = line.other_article_id, "
-            "p2.label = line.other_article_id, "
-            "p2.b_title = COALESCE(line.other_title, p2.b_title, ''), "
-            "p2.epubdate = COALESCE(line.other_epubdate, p2.epubdate, ''), "
-            "p2.authors = COALESCE(line.other_authors, p2.authors, ''), "
-            "p2.journal = COALESCE(line.other_journal, p2.journal, ''), "
-            "p2.z_abstract = COALESCE(line.other_abstract, p2.z_abstract, ''), "
-            "p2.date_integration = '" + date_now + "' "
-            "WITH line, p1, p2 "
-            "FOREACH (keyword1 in CASE WHEN line.article_keywords IS NOT NULL "
-            "THEN split(line.article_keywords, ',') ELSE [] END | "
-            "MERGE (k1:Keyword { name: keyword1 }) "
-            "MERGE (p1)-[:contains]->(k1)) "
-            "FOREACH (keyword2 in CASE WHEN line.other_keywords IS NOT NULL "
-            "THEN split(line.other_keywords, ',') ELSE [] END | "
-            "MERGE (k2:Keyword { name: keyword2 }) "
-            "MERGE (p2)-[:contains]->(k2)) " + 
-            str_adding_annotations +
-            "MERGE (p1)-[:citing]->(p2);")
+        query = ("LOAD CSV WITH HEADERS FROM 'file:///data/citations.csv' "\
+                 "AS line FIELDTERMINATOR '|' "
+                "MERGE (p1:Article { name: line.article }) "
+                "ON CREATE SET p1.a_name = line.article, "\
+                    "p1.label = line.article, "\
+                    "p1.b_title = line.article_title, "\
+                    "p1.pmc_id = line.article_pmc_id, "\
+                    "p1.epubdate = line.article_epubdate, "\
+                    "p1.authors = line.article_authors, "\
+                    "p1.journal = line.article_journal, "\
+                    "p1.z_abstract = line.article_abstract, "\
+                    "p1.date_integration = '" + date_now + "' "
+                "ON MATCH SET p1.a_name = line.article, "\
+                    "p1.label = line.article, "\
+                    "p1.b_title = line.article_title, "\
+                    "p1.pmc_id = line.article_pmc_id, "\
+                    "p1.epubdate = line.article_epubdate, "\
+                    "p1.authors = line.article_authors, "\
+                    "p1.journal = line.article_journal, "\
+                    "p1.z_abstract = line.article_abstract, "\
+                    "p1.date_integration = '" + date_now + "' "
+                "MERGE (p2:Article { name: line.reference }) "
+                "ON CREATE SET p2.a_name = line.reference, "\
+                    "p2.label = line.reference, "\
+                    "p2.b_title = line.reference_title, "\
+                    "p2.pmc_id = line.reference_pmc_id, "\
+                    "p2.epubdate = line.reference_epubdate, "\
+                    "p2.authors = line.reference_authors, "\
+                    "p2.journal = line.reference_journal, "\
+                    "p2.z_abstract = line.reference_abstract, "\
+                    "p2.date_integration = '" + date_now + "' "
+                "ON MATCH SET p2.a_name = line.reference, "\
+                    "p2.label = line.reference, "\
+                    "p2.b_title = line.reference_title, "\
+                    "p2.pmc_id = line.reference_pmc_id, "\
+                    "p2.epubdate = line.reference_epubdate, "\
+                    "p2.authors = line.reference_authors, "\
+                    "p2.journal = line.reference_journal, "\
+                    "p2.z_abstract = line.reference_abstract, "\
+                    "p2.date_integration = '" + date_now + "' "
+                "FOREACH (keyword1 in split(line.article_keywords, ',') | "\
+                    "MERGE (k1:Keyword { name: keyword1 }) MERGE "\
+                    "(p1)-[:contains]->(k1) ) " ""
+                "FOREACH (keyword2 in split(line.reference_keywords, ',') | "\
+                    "MERGE (k2:Keyword { name: keyword2 }) "\
+                    "MERGE (p2)-[:contains]->(k2) ) " \
+                    + str_adding_annotations \
+                    + "MERGE (p1)-[:citing]->(p2);")
         result = tx.run(query)
