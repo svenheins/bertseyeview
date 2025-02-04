@@ -145,7 +145,7 @@ def get_entity_string(original_string: str = "", entity_type: str = "") -> str:
             return_string = "https://www.ncbi.nlm.nih.gov/pmc|"
     elif entity_type == "article_pubtator":
         pubmed_id = original_string.replace("https://pubmed.ncbi.nlm.nih.gov/", "")
-        return_string = "https://www.ncbi.nlm.nih.gov/research/pubtator/?view=publication&pmid=" + pubmed_id + "|"+pubmed_id
+        return_string = "https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/" + pubmed_id + "|"+pubmed_id
     return return_string
 
 
