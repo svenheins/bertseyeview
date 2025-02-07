@@ -4,6 +4,7 @@ output/als/pubtator_response.xml
 data/*
 input/als/DOI-list.csv
 input/als/DOI-list-all.csv
+input/als/DOI-list-old.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
