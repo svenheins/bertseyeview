@@ -2156,26 +2156,34 @@ class Neo4j_Manager:
         ## ensure that Articles as well as the relationship exists 
         ## before running the graph projection
         query = """
-        CALL apoc.when(EXISTS( (:Article)-[:citing]-(:Article) )," CALL gds.graph.project(
-                'articleGraph',
-                'Article',
-                'citing'
-                ) 
-
-                ")
-        """                
-        result = tx.run(query)
-        query = """
-        CALL apoc.when(EXISTS(  (:Article)-[:citing]-(:Article)  )," CALL gds.articleRank.write('articleGraph', {
-            writeProperty: 'article_rank'}) 
-            ")
+        OPTIONAL MATCH (a:Article)-[:citing]-(:Article)
+        WITH count(a) as citationCount
+        WHERE citationCount > 0
+        CALL gds.graph.project(
+            'articleGraph',
+            'Article',
+            'citing'
+        ) YIELD graphName
+        RETURN graphName
         """
         result = tx.run(query)
-        query = """
-        CALL apoc.when(EXISTS( (:Article)-[:citing]-(:Article) )," CALL gds.graph.drop('articleGraph')
-                ")
-        """                
-        result = tx.run(query)
+        # Only proceed with article rank if graph was created
+        if result.peek() is not None:
+            query = """
+            CALL gds.articleRank.write('articleGraph', {
+                writeProperty: 'article_rank'
+            })
+            YIELD nodePropertiesWritten
+            RETURN nodePropertiesWritten
+            """
+            result = tx.run(query)
+            
+            query = """
+            CALL gds.graph.drop('articleGraph')
+            YIELD graphName
+            RETURN graphName
+            """
+            result = tx.run(query)
 
 
     @staticmethod
