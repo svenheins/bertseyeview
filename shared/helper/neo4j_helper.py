@@ -2055,7 +2055,7 @@ class Neo4j_Manager:
 
         query_string = '''
                 MATCH (p:{}) 
-                WHERE {} EXISTS(p.{}) 
+                WHERE {} p.{} IS NOT NULL 
                 RETURN p.{} AS name 
             '''.format(concept_label, negate_str, concept_field, return_field)
         query = (
