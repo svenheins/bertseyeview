@@ -1,0 +1,239 @@
+{
+	"title": "MIGRATION Knowledge Graph",
+	"tablesKey": "Overview",
+	"graphsKey": "Graphs",
+	"pages": [
+		{
+			"name": "Overview",
+			"path": "",
+			"class": "font-weight-bold",
+			"icon": null,
+			"style": "",
+			"hidden": false,
+			"graph": false,
+			"table": false,
+			"text": true,
+			"fileName": "tables.md",
+			"children": [
+				{
+					"name": "Main Literature",
+					"path": "/top_n_articles_for_label?count=100&norm_by_age=true&label=disease&field=name&operator=%3D&terms=Disease%3AMESH%3AD000690&format=csv",
+					"class": "font-weight-medium",
+					"icon": "mdi-table",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": false,
+					"table": true,
+					"text": false
+				},
+				{
+					"name": "Latest Literature",
+					"path": "/search?entity_label=article&entity_fields=query&search_operators=%3D&search_terms=main&sort_by=epubdate&sort_descending=true&result_limit=100&format=csv",
+					"class": "font-weight-medium",
+					"icon": "mdi-table",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": false,
+					"table": true,
+					"text": false
+				},
+				{
+					"name": "Genes",
+					"path": "/label_abundance/predefined?query=genes",
+					"class": "font-weight-medium",
+					"icon": "mdi-table",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": false,
+					"table": true,
+					"text": false
+				},
+				{
+					"name": "Chemicals",
+					"path": "/label_abundance/predefined?query=chemicals",
+					"class": "font-weight-medium",
+					"icon": "mdi-table",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": false,
+					"table": true,
+					"text": false
+				},
+				{
+					"name": "Diseases",
+					"path": "/label_abundance/predefined?query=diseases",
+					"class": "font-weight-medium",
+					"icon": "mdi-table",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": false,
+					"table": true,
+					"text": false
+				}
+			]
+		},
+		{
+			"name": "Graphs",
+			"path": "",
+			"class": "font-weight-bold",
+			"icon": null,
+			"style": "",
+			"hidden": false,
+			"graph": false,
+			"table": false,
+			"text": true,
+			"fileName": "graphs.md",
+			"children": [
+				{
+					"name": "Main Literature",
+					"path": "/cytoscape/predefined?query=main-literature",
+					"class": "font-weight-medium",
+					"icon": "mdi-graphql",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": true,
+					"table": false,
+					"text": false
+				},
+				{
+					"name": "Latest Literature",
+					"path": "/cytoscape/predefined?query=latest-literature",
+					"class": "font-weight-medium",
+					"icon": "mdi-graphql",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": true,
+					"table": false,
+					"text": false
+				},
+				{
+					"name": "Main Entities",
+					"path": "/cytoscape/predefined?query=main-diseases",
+					"class": "font-weight-medium",
+					"icon": "mdi-graphql",
+					"style": "",
+					"child": true,
+					"level": 1,
+					"hidden": false,
+					"graph": true,
+					"table": false,
+					"text": true
+				}
+			]
+		},
+		{
+			"name": "Transformations Example",
+			"path": null,
+			"class": "font-weight-medium",
+			"icon": "mdi-table",
+			"style": "",
+			"hidden": true,
+			"graph": false,
+			"table": true,
+			"text": false,
+			"fileName": "transformations.csv"
+		},
+		{
+			"name": "Privacy Policy",
+			"dynamic": true,
+			"path": "/privacy",
+			"class": "font-weight-medium",
+			"icon": "mdi-safe",
+			"style": "",
+			"hidden": true,
+			"graph": false,
+			"table": false,
+			"text": true,
+			"fileName": "privacy.md"
+		},
+		{
+			"name": "Legal Disclosure",
+			"dynamic": true,
+			"path": "/impressum",
+			"class": "font-weight-medium",
+			"icon": "mdi-scale-balance",
+			"style": "",
+			"hidden": true,
+			"graph": false,
+			"table": false,
+			"text": true,
+			"fileName": "impressum.md"
+		},
+		{
+			"name": "Contributions",
+			"dynamic": true,
+			"path": "/contributions",
+			"class": "font-weight-medium",
+			"icon": "",
+			"style": "",
+			"hidden": true,
+			"graph": false,
+			"table": false,
+			"text": true,
+			"fileName": "contributions.md"
+		},
+		{
+			"name": "Markdown",
+			"dynamic": true,
+			"path": "/markdown",
+			"class": "font-weight-medium",
+			"icon": "mdi-scale-balance",
+			"style": "",
+			"hidden": true,
+			"graph": false,
+			"table": false,
+			"text": true,
+			"fileName": "markdown.md"
+		}
+	],
+	"footer": {
+		"text": "MIGRATION Knowledge Graph",
+		"links": [
+			{
+				"to": "/privacy",
+				"class": "body-2 font-weight-regular mr-2",
+				"text": "Privacy Policy"
+			},
+			{
+				"to": "/impressum",
+				"class": "body-2 font-weight-regulat mr-2",
+				"text": "Legal Disclosure"
+			},
+			{
+				"to": "/contributions",
+				"class": "body-2 font-weight-regulat mr-2",
+				"text": "Contributions"
+			}
+		],
+		"chips": [
+			{
+				"refName": "baiome",
+				"href": "https://baiome.org",
+				"imgSrc": "https://files.ims.bio/imsb.org/images/baiome-favicon.ico",
+				"text": "bAIome",
+				"condition": true
+			},
+			{
+				"refName": "imsb",
+				"href": "https://ims.bio/",
+				"imgSrc": "I",
+				"text": "IMSB",
+				"condition": true
+			}
+		]
+	}
+}
