@@ -1671,7 +1671,7 @@ class Neo4j_Manager:
         result = self.query(graph_embedding)
 
         ## get all nodes with their 128 dimensional embedding
-        query = f'''Match (n) WHERE EXISTS(n.{embedding_attribute_128dim}) RETURN DISTINCT id(n), n.name, n.label, n.b_title, labels(n), n.{embedding_attribute_128dim}'''
+        query = f'''Match (n) WHERE n.{embedding_attribute_128dim} IS NOT NULL RETURN DISTINCT id(n), n.name, n.label, n.b_title, labels(n), n.{embedding_attribute_128dim}'''
         result = self.query(query)
 
         ## add embeddings to numpy array
@@ -2095,7 +2095,7 @@ class Neo4j_Manager:
     def _add_iso_sortpubdate_for_all_articles(tx):
         query = (
             "MATCH (n:Article) "
-            "WHERE NOT EXISTS(n.iso_sortpubdate) "
+            "WHERE n.iso_sortpubdate IS NULL "
             "SET n.iso_sortpubdate = replace(split\
                 (n.sortpubdate,(' '))[0],'/','-') "
             "RETURN count(n) as count_n "
