@@ -1660,7 +1660,7 @@ class Neo4j_Manager:
         result = self.query(graph_creation)
 
         ## run node2vec on neo4j
-        graph_embedding = '''CALL gds.beta.node2vec.stream('knowledgeGraph', {concurrency: 4, iterations: 4, embeddingDimension: 128, walksPerNode: 50, walkLength: 80, returnFactor: 0.9, inOutFactor: 0.9})
+        graph_embedding = '''CALL gds.node2vec.stream('knowledgeGraph', {concurrency: 4, iterations: 4, embeddingDimension: 128, walksPerNode: 50, walkLength: 80, returnFactor: 0.9, inOutFactor: 0.9})
         YIELD nodeId, embedding
         WITH nodeId, embedding
         MATCH (n)
