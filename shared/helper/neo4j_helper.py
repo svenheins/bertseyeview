@@ -540,7 +540,7 @@ class Neo4j_Manager:
             // the subgraph (i.e. ALS + homo sapiens)
             MATCH (entity){goal_jump_entity}<--(mentions_subset_1)
             WHERE mentions_subset_1 IN subset_list_1 and absolute_mentions > {goal_entity_min_mentions}
-            WITH entity, absolute_mentions, expected_mentions, {subset_2_with_clause}
+            WITH entity, absolute_mentions, expected_mentions, count_subset_articles_1, {subset_2_with_clause}
                 count(mentions_subset_1) AS absolute_subset_mentions_1, 
                 (toFloat(count(mentions_subset_1)) / count_subset_articles_1) 
                     AS relative_subset_mentions_1, 
