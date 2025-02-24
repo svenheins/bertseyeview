@@ -925,17 +925,8 @@ def update_csv_content_by_json_response(
                                         csv_content += csv_candidate
                                         reference_id += 1
                                     else:
-                                        # logging.info("Error: csv row has wrong number of \
-                                        # columns: "+str(csv_column_count)+" expected: "\
-                                        # +str(csv_header_column_count))
-                                        raise Exception(
-                                            "Error: csv row has wrong number "
-                                            "of columns: "
-                                            + str(csv_column_count)
-                                            + " expected: "
-                                            + str(csv_header_column_count)
-                                            + "\n"
-                                            + csv_candidate
+                                        logging.info(
+                                            f"Skipping row with incorrect column count: {csv_column_count} (expected {csv_header_column_count}). Data: {csv_candidate}"
                                         )
                                 current_index += 1
                         if is_article_first:
